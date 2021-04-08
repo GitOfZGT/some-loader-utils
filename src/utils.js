@@ -11,7 +11,7 @@ const getAllStyleVarFiles = (loaderContext, options) => {
     allStyleVarFiles = styleVarFiles.filter((item) => {
       if (!item.scopeName) {
         loaderContext.emitError(
-          new Error("Not found scopeName in less-loader multipleScopeVars")
+          new Error("Not found scopeName in multipleScopeVars")
         );
         return false;
       }
@@ -20,9 +20,7 @@ const getAllStyleVarFiles = (loaderContext, options) => {
           const exists = pathstr && fs.existsSync(pathstr);
           if (!exists) {
             loaderContext.emitError(
-              new Error(
-                `Not found path: ${pathstr} in less-loader multipleScopeVars`
-              )
+              new Error(`Not found path: ${pathstr} in multipleScopeVars`)
             );
           }
           return exists;
@@ -34,9 +32,7 @@ const getAllStyleVarFiles = (loaderContext, options) => {
         !fs.existsSync(item.path)
       ) {
         loaderContext.emitError(
-          new Error(
-            `Not found path: ${item.path} in less-loader multipleScopeVars`
-          )
+          new Error(`Not found path: ${item.path} in multipleScopeVars`)
         );
         return false;
       }
