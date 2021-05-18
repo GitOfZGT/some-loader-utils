@@ -274,40 +274,50 @@ const getScropProcessResult = getScopeProcessResult;
  * @param {String} options.css css内容
  * @param {Array} options.multipleScopeVars [{scopeName:"theme-default"}]
  * @param {Boolean} options.removeCssScopeName 抽取的css是否移除scopeName
- * @returns { css: String, themeCss: Object }
+ * @returns { css: String, themeCss: Object , themeCommonCss: String }
  */
 const extractThemeCss = ({ css, multipleScopeVars, removeCssScopeName }) => {
   let content = css;
-  let themeCss = {};
+  const themeCss = {};
+  let themeCommonCss = "";
   if (content && Array.isArray(multipleScopeVars)) {
-    const themeFragsMap = {};
     let newContent = content;
-    multipleScopeVars.forEach((item) => {
-      if (!item.scopeName) {
+    const classNameFrags = content.match(/\w*\.[^{}/\\]+{[^{}]*?}/g);
+    classNameFrags.forEach((frag) => {
+      const isCommon = multipleScopeVars.every(
+        (item) =>
+          item.scopeName && new RegExp(`\\.${item.scopeName}`).test(frag)
+      );
+      if (isCommon) {
+        newContent = newContent.replace(frag, "");
+        themeCommonCss = `${themeCommonCss}${
+          removeCssScopeName
+            ? multipleScopeVars.reduce(
+                (tol, item) =>
+                  tol.replace(new RegExp(`\\.${item.scopeName}`, "g"), ""),
+                frag
+              )
+            : frag
+        }`;
         return;
       }
-      const currThemefixReg = new RegExp(
-        `\\w*\\.${item.scopeName}\\s*[^{}/\\\\]*{[^{}]*?}`,
-        "g"
+      const hasScope = multipleScopeVars.find(
+        (item) =>
+          item.scopeName && new RegExp(`\\.${item.scopeName}`).test(frag)
       );
-
-      newContent = newContent.replace(currThemefixReg, "");
-      let themeFrags = content.match(currThemefixReg);
-      if (themeFrags) {
-        if (removeCssScopeName) {
-          const scopeNameReg = new RegExp(`\\.${item.scopeName}`, "g");
-          themeFrags = themeFrags.map((frag) => frag.replace(scopeNameReg, ""));
-        }
-        const scopeFrags = themeFragsMap[item.scopeName] || [];
-        themeFragsMap[item.scopeName] = scopeFrags.concat(themeFrags);
+      if (hasScope) {
+        newContent = newContent.replace(frag, "");
+        const scopeFrags = themeCss[hasScope.scopeName] || "";
+        themeCss[hasScope.scopeName] = `${scopeFrags}${
+          removeCssScopeName
+            ? frag.replace(new RegExp(`\\.${hasScope.scopeName}`, "g"), "")
+            : frag
+        }`;
       }
     });
-    themeCss = Object.keys(themeFragsMap).reduce((tol, key) => {
-      return { ...tol, [key]: (themeFragsMap[key] || []).join("") };
-    }, {});
     content = newContent;
   }
-  return { css: content, themeCss };
+  return { css: content, themeCss, themeCommonCss };
 };
 
 const addScopnameToHtmlClassname = (html, defaultScopeName) => {
