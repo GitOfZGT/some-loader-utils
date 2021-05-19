@@ -49,7 +49,7 @@ export function getSass(opt = {}) {
         });
       });
     let cssResult = {};
-    return Promise.all(
+    const rePromise = Promise.all(
       allStyleVarFiles.map((file) => {
         const varscontent = getVarsContent(file.path, packname);
         return preProcessor(`${varscontent}\n${renderOptions.data}`);
@@ -82,13 +82,11 @@ export function getSass(opt = {}) {
         }
 
         return cssResult;
-      })
-
-      .catch((error) => {
-        if (callback) {
-          callback(error);
-        }
       });
+    if (callback) {
+      rePromise.catch(callback);
+    }
+    return rePromise;
   };
   return sass;
 }

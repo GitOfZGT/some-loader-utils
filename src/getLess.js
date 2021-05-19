@@ -35,7 +35,7 @@ export function getLess(opt = {}) {
     );
     const preProcessor = (code) => render.call(less, code, renderOptions);
 
-    return Promise.all(
+    const rePromise = Promise.all(
       allStyleVarFiles.map((file) => {
         const varscontent = getVarsContent(file.path, packname);
         return preProcessor(`${input}\n${varscontent}`);
@@ -61,12 +61,11 @@ export function getLess(opt = {}) {
           return null;
         }
         return cssResult;
-      })
-      .catch((error) => {
-        if (callback) {
-          callback(error);
-        }
       });
+    if (callback) {
+      rePromise.catch(callback);
+    }
+    return rePromise;
   };
   return less;
 }
