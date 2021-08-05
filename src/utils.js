@@ -311,9 +311,13 @@ const extractThemeCss = ({ css, multipleScopeVars, removeCssScopeName }) => {
     let content = css;
     const themeCss = {};
     let themeCommonCss = '';
-    if (content && Array.isArray(multipleScopeVars)) {
+    if (
+        typeof content === 'string' &&
+        content &&
+        Array.isArray(multipleScopeVars)
+    ) {
         let newContent = content;
-        const classNameFrags = content.match(/\w*\.[^{}/\\]+{[^{}]*?}/g);
+        const classNameFrags = content.match(/\w*\.[^{}/\\]+{[^{}]*?}/g) || [];
         classNameFrags.forEach((frag) => {
             const isCommon = multipleScopeVars.every(
                 (item) =>
@@ -361,40 +365,35 @@ const extractThemeCss = ({ css, multipleScopeVars, removeCssScopeName }) => {
 
 const addScopnameToHtmlClassname = (html, defaultScopeName) => {
     let newHtml = html;
-    const htmlTagAttrStrings = html.match(/<\s*html[^<>]*>/gi);
+    const htmlTagAttrStrings = html.match(/<\s*html[^<>]*>/gi) || [];
 
-    if (htmlTagAttrStrings) {
-        htmlTagAttrStrings.forEach((attrstr) => {
-            const classnameStrings = attrstr.match(/class\s*=['"].+['"]/g);
-            if (classnameStrings) {
-                classnameStrings.forEach((classstr) => {
-                    const classnamestr = classstr.replace(
-                        /(^class\s*=['"]|['"]$)/g,
-                        ''
-                    );
-                    const classnames = classnamestr.split(' ');
-                    if (!classnames.includes(defaultScopeName)) {
-                        classnames.push(defaultScopeName);
-                        newHtml = newHtml.replace(
-                            attrstr,
-                            attrstr.replace(
-                                classstr,
-                                classstr.replace(
-                                    classnamestr,
-                                    classnames.join(' ')
-                                )
-                            )
-                        );
-                    }
-                });
-            } else {
-                newHtml = newHtml.replace(
-                    attrstr,
-                    `${attrstr.replace(/>$/, '')} class="${defaultScopeName}">`
+    htmlTagAttrStrings.forEach((attrstr) => {
+        const classnameStrings = attrstr.match(/class\s*=['"].+['"]/g);
+        if (classnameStrings) {
+            classnameStrings.forEach((classstr) => {
+                const classnamestr = classstr.replace(
+                    /(^class\s*=['"]|['"]$)/g,
+                    ''
                 );
-            }
-        });
-    }
+                const classnames = classnamestr.split(' ');
+                if (!classnames.includes(defaultScopeName)) {
+                    classnames.push(defaultScopeName);
+                    newHtml = newHtml.replace(
+                        attrstr,
+                        attrstr.replace(
+                            classstr,
+                            classstr.replace(classnamestr, classnames.join(' '))
+                        )
+                    );
+                }
+            });
+        } else {
+            newHtml = newHtml.replace(
+                attrstr,
+                `${attrstr.replace(/>$/, '')} class="${defaultScopeName}">`
+            );
+        }
+    });
     return newHtml;
 };
 
