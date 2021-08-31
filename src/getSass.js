@@ -49,6 +49,7 @@ export function getSass(opt = {}) {
         });
       });
     let cssResult = {};
+    // 按allStyleVarFiles的个数对当前文件编译多次得到多个结果
     const rePromise = Promise.all(
       allStyleVarFiles.map((file) => {
         const varscontent = getVarsContent(file.path, packname);

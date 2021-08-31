@@ -1,8 +1,8 @@
 import {
-  getScopeProcessResult,
-  getAllStyleVarFiles,
-  getVarsContent,
-} from "./utils";
+    getScopeProcessResult,
+    getAllStyleVarFiles,
+    getVarsContent,
+} from './utils';
 /**
  *
  * @param {Object} opt
@@ -11,63 +11,63 @@ import {
  * @returns less
  */
 export function getLess(opt = {}) {
-  const packname = "less";
-  const less = opt.implementation || require(packname);
-  const { render } = less;
-  // eslint-disable-next-line func-names
-  less.render = function (input, options = {}, callback) {
-    const renderOptions = { ...options };
+    const packname = 'less';
+    const less = opt.implementation || require(packname);
+    const { render } = less;
+    // eslint-disable-next-line func-names
+    less.render = function (input, options = {}, callback) {
+        const renderOptions = { ...options };
 
-    const multipleScopeVars =
-      typeof opt.getMultipleScopeVars === "function"
-        ? opt.getMultipleScopeVars(renderOptions)
-        : renderOptions.multipleScopeVars;
+        const multipleScopeVars =
+            typeof opt.getMultipleScopeVars === 'function'
+                ? opt.getMultipleScopeVars(renderOptions)
+                : renderOptions.multipleScopeVars;
 
-    delete renderOptions.multipleScopeVars;
+        delete renderOptions.multipleScopeVars;
 
-    const allStyleVarFiles = getAllStyleVarFiles(
-      {
-        emitError: (msg) => {
-          throw new Error(msg);
-        },
-      },
-      { multipleScopeVars }
-    );
-    const preProcessor = (code) => render.call(less, code, renderOptions);
-
-    const rePromise = Promise.all(
-      allStyleVarFiles.map((file) => {
-        const varscontent = getVarsContent(file.path, packname);
-        return preProcessor(`${input}\n${varscontent}`);
-      })
-    )
-      .then((prs) =>
-        getScopeProcessResult(
-          prs.map((item) => {
-            return { ...item, code: item.css, deps: item.imports };
-          }),
-          allStyleVarFiles,
-          renderOptions.filename
+        const allStyleVarFiles = getAllStyleVarFiles(
+            {
+                emitError: (msg) => {
+                    throw new Error(msg);
+                },
+            },
+            { multipleScopeVars }
+        );
+        const preProcessor = (code) => render.call(less, code, renderOptions);
+        // 按allStyleVarFiles的个数对当前文件编译多次得到多个结果
+        const rePromise = Promise.all(
+            allStyleVarFiles.map((file) => {
+                const varscontent = getVarsContent(file.path, packname);
+                return preProcessor(`${input}\n${varscontent}`);
+            })
         )
-      )
-      .then((result) => {
-        const cssResult = {
-          css: result.code,
-          imports: result.deps,
-          map: result.map,
-        };
+            .then((prs) =>
+                getScopeProcessResult(
+                    prs.map((item) => {
+                        return { ...item, code: item.css, deps: item.imports };
+                    }),
+                    allStyleVarFiles,
+                    renderOptions.filename
+                )
+            )
+            .then((result) => {
+                const cssResult = {
+                    css: result.code,
+                    imports: result.deps,
+                    map: result.map,
+                };
+                if (callback) {
+                    callback(null, cssResult);
+                    return null;
+                }
+                return cssResult;
+            });
         if (callback) {
-          callback(null, cssResult);
-          return null;
+            rePromise.catch(callback);
         }
-        return cssResult;
-      });
-    if (callback) {
-      rePromise.catch(callback);
-    }
-    return rePromise;
-  };
-  return less;
+        return rePromise;
+    };
+    return less;
 }
 
 export default getLess;

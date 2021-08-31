@@ -34,6 +34,8 @@ Type `Function`
 
 used in [`less-loader`](https://github.com/webpack-contrib/less-loader)
 
+> 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到less变量提升的作用
+
 ```js
 const path = require("path");
 // const less = require("less");
@@ -80,6 +82,8 @@ Type `Function`
 获取支持多个变量文件的`sass`编译器
 
 used in [`sass-loader`](https://github.com/webpack-contrib/sass-loader)
+
+> 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到scss变量提升的作用
 
 ```js
 const path = require("path");
