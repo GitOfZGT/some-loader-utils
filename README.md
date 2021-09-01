@@ -4,14 +4,14 @@
 
 提供了方法：
 
-- [getAllStyleVarFiles](#getAllStyleVarFiles)
-- [getVarsContent](#getVarsContent)
-- [getScopeProcessResult](#getScopeProcessResult)
+-   [getAllStyleVarFiles](#getAllStyleVarFiles)
+-   [getVarsContent](#getVarsContent)
+-   [getScopeProcessResult](#getScopeProcessResult)
 
 之后可能不再维护[`@zougt/less-loader`](https://github.com/GitOfZGT/less-loader)和[`@zougt/sass-loader`](https://github.com/GitOfZGT/less-loader)同步 fork 更新，提供了[`less-loader`](https://github.com/webpack-contrib/less-loader)和[`sass-loader`](https://github.com/webpack-contrib/sass-loader)的 `implementation` 版本的多主题变量文件编译方案的方法：
 
-- [getLess](#getLess)
-- [getSass](#getSass)
+-   [getLess](#getLess)
+-   [getSass](#getSass)
 
 使得基于`less`、`sass`的(新、旧)项目实现在线预设主题的动态切换变得很简单，并且兼容性最好。
 
@@ -34,44 +34,46 @@ Type `Function`
 
 used in [`less-loader`](https://github.com/webpack-contrib/less-loader)
 
-> 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到less变量提升的作用
+> 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到 less 变量提升的作用
 
 ```js
-const path = require("path");
+const path = require('path');
 // const less = require("less");
-const { getLess } = require("@zougt/some-loader-utils");
+const { getLess } = require('@zougt/some-loader-utils');
 
 const multipleScopeVars = [
-  {
-    scopeName: "theme-default",
-    path: path.resolve("src/theme/default-vars.less"),
-  },
-  {
-    scopeName: "theme-mauve",
-    path: path.resolve("src/theme/mauve-vars.less"),
-  },
+    {
+        scopeName: 'theme-default',
+        path: path.resolve('src/theme/default-vars.less'),
+    },
+    {
+        scopeName: 'theme-mauve',
+        path: path.resolve('src/theme/mauve-vars.less'),
+    },
 ];
 module.exports = {
-  module: {
-    rules: [
-      {
-        test: /\.less$/i,
-        loader: "less-loader",
-        options: {
-          lessOptions: {
-            // 不使用 getMultipleScopeVars时，也可从这里传入 multipleScopeVars
-            // multipleScopeVars
-          },
-          implementation: getLess({
-            // getMultipleScopeVars优先于 lessOptions.multipleScopeVars
-            getMultipleScopeVars: (lessOptions) => multipleScopeVars,
-            // 可选项
-            // implementation:less
-          }),
-        },
-      },
-    ],
-  },
+    module: {
+        rules: [
+            {
+                test: /\.less$/i,
+                // 请确保支持 implementation 属性的 less-loader版本
+                loader: 'less-loader',
+                options: {
+                    lessOptions: {
+                        // 不使用 getMultipleScopeVars时，也可从这里传入 multipleScopeVars
+                        // multipleScopeVars
+                    },
+                    implementation: getLess({
+                        // getMultipleScopeVars优先于 lessOptions.multipleScopeVars
+                        getMultipleScopeVars: (lessOptions) =>
+                            multipleScopeVars,
+                        // 可选项
+                        // implementation:less
+                    }),
+                },
+            },
+        ],
+    },
 };
 ```
 
@@ -83,47 +85,53 @@ Type `Function`
 
 used in [`sass-loader`](https://github.com/webpack-contrib/sass-loader)
 
-> 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到scss变量提升的作用
+> 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到 scss 变量提升的作用
 
 ```js
-const path = require("path");
+const path = require('path');
 // const sass = require("sass");
-const { getSass } = require("@zougt/some-loader-utils");
+const { getSass } = require('@zougt/some-loader-utils');
 const multipleScopeVars = [
-  {
-    scopeName: "theme-default",
-    path: path.resolve("src/theme/default-vars.scss"),
-  },
-  {
-    scopeName: "theme-mauve",
-    path: path.resolve("src/theme/mauve-vars.scss"),
-  },
+    {
+        scopeName: 'theme-default',
+        path: path.resolve('src/theme/default-vars.scss'),
+    },
+    {
+        scopeName: 'theme-mauve',
+        path: path.resolve('src/theme/mauve-vars.scss'),
+    },
 ];
 module.exports = {
-  module: {
-    rules: [
-      {
-        test: /\.scss$/i,
-        loader: "sass-loader",
-        options: {
-          sassOptions: {
-            // 不使用 getMultipleScopeVars 时，也可从这里传入 multipleScopeVars
-            // multipleScopeVars
-          },
-          implementation: getSass({
-            // getMultipleScopeVars优先于 sassOptions.multipleScopeVars
-            getMultipleScopeVars: (sassOptions) => multipleScopeVars,
-            // 可选项
-            // implementation:less
-          }),
-        },
-      },
-    ],
-  },
+    module: {
+        rules: [
+            {
+                test: /\.scss$/i,
+                 // 请确保支持 implementation 属性的 sass-loader版本
+                loader: 'sass-loader',
+                options: {
+                    sassOptions: {
+                        // 不使用 getMultipleScopeVars 时，也可从这里传入 multipleScopeVars
+                        // multipleScopeVars
+                    },
+                    implementation: getSass({
+                        // getMultipleScopeVars优先于 sassOptions.multipleScopeVars
+                        getMultipleScopeVars: (sassOptions) =>
+                            multipleScopeVars,
+                        // 可选项
+                        // implementation:sass
+                    }),
+                },
+            },
+        ],
+    },
 };
 ```
 
+> 有多少个主题变量的文件，就会对经过编译器的 less/sass 文件进行编译多少次，所以 multipleScopeVars 项越多，必然会增加编译时间，建议在`开发模式`只提供一个变量文件，在`需要调试切换主题`或`生产模式`时就提供完整的变量文件个数进行打包
+
 ## 多主题编译示例（以 sass 为例）
+
+**主题包含的不只是颜色部分**
 
 ```scss
 //src/theme/default-vars.scss
@@ -132,27 +140,30 @@ module.exports = {
 *同时此scss变量文件作为默认主题变量文件，被其他.scss通过 @import 时，必需 !default
 */
 $primary-color: #0081ff !default;
+$--border-radius-base: 4px !default;
 ```
 
 ```scss
 //src/theme/mauve-vars.scss
 $primary-color: #9c26b0 !default;
+$--border-radius-base: 8px !default;
 ```
 
 ```scss
 //src/components/Button/style.scss
-@import "../../theme/default-vars";
+@import '../../theme/default-vars';
 .un-btn {
-  position: relative;
-  display: inline-block;
-  font-weight: 400;
-  white-space: nowrap;
-  text-align: center;
-  border: 1px solid transparent;
-  background-color: $primary-color;
-  .anticon {
-    line-height: 1;
-  }
+    position: relative;
+    display: inline-block;
+    font-weight: 400;
+    white-space: nowrap;
+    text-align: center;
+    border: 1px solid transparent;
+    background-color: $primary-color;
+    border-radius: $--border-radius-base;
+    .anticon {
+        line-height: 1;
+    }
 }
 ```
 
@@ -162,21 +173,23 @@ src/components/Button/style.css
 
 ```css
 .un-btn {
-  position: relative;
-  display: inline-block;
-  font-weight: 400;
-  white-space: nowrap;
-  text-align: center;
-  border: 1px solid transparent;
+    position: relative;
+    display: inline-block;
+    font-weight: 400;
+    white-space: nowrap;
+    text-align: center;
+    border: 1px solid transparent;
 }
 .theme-default .un-btn {
-  background-color: #0081ff;
+    background-color: #0081ff;
+    border-radius: 4px;
 }
 .theme-mauve .un-btn {
-  background-color: #9c26b0;
+    background-color: #9c26b0;
+    border-radius: 8px;
 }
 .un-btn .anticon {
-  line-height: 1;
+    line-height: 1;
 }
 ```
 
@@ -185,19 +198,19 @@ src/components/Button/style.css
 ```html
 <!DOCTYPE html>
 <html lang="zh" class="theme-default">
-  <head>
-    <meta charset="utf-8" />
-    <title>title</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <!-- built files will be auto injected -->
-  </body>
+    <head>
+        <meta charset="utf-8" />
+        <title>title</title>
+    </head>
+    <body>
+        <div id="app"></div>
+        <!-- built files will be auto injected -->
+    </body>
 </html>
 ```
 
 ```js
-document.documentElement.className = "theme-mauve";
+document.documentElement.className = 'theme-mauve';
 ```
 
 ### 使用 Css Modules
@@ -206,12 +219,12 @@ document.documentElement.className = "theme-mauve";
 
 ```css
 .src-components-Button-style_theme-default-3CPvz
-  .src-components-Button-style_un-btn-1n85E {
-  background-color: #0081ff;
+    .src-components-Button-style_un-btn-1n85E {
+    background-color: #0081ff;
 }
 .src-components-Button-style_theme-mauve-3yajX
-  .src-components-Button-style_un-btn-1n85E {
-  background-color: #9c26b0;
+    .src-components-Button-style_un-btn-1n85E {
+    background-color: #9c26b0;
 }
 ```
 
@@ -219,96 +232,103 @@ document.documentElement.className = "theme-mauve";
 
 ```css
 .theme-default .src-components-Button-style_un-btn-1n85E {
-  background-color: #0081ff;
+    background-color: #0081ff;
 }
 .theme-mauve .src-components-Button-style_un-btn-1n85E {
-  background-color: #9c26b0;
+    background-color: #9c26b0;
 }
 ```
 
 在 webpack.config.js 需要对`css-loader` (v4.0+) 的 modules 属性添加 getLocalIdent:
 
 ```js
-const path = require("path");
+const path = require('path');
 // const sass = require("sass");
-const { getSass } = require("@zougt/some-loader-utils");
-const { interpolateName } = require("loader-utils");
+const { getSass } = require('@zougt/some-loader-utils');
+const { interpolateName } = require('loader-utils');
 function normalizePath(file) {
-  return path.sep === "\\" ? file.replace(/\\/g, "/") : file;
+    return path.sep === '\\' ? file.replace(/\\/g, '/') : file;
 }
 const multipleScopeVars = [
-  {
-    scopeName: "theme-default",
-    path: path.resolve("src/theme/default-vars.scss"),
-  },
-  {
-    scopeName: "theme-mauve",
-    path: path.resolve("src/theme/mauve-vars.scss"),
-  },
+    {
+        scopeName: 'theme-default',
+        path: path.resolve('src/theme/default-vars.scss'),
+    },
+    {
+        scopeName: 'theme-mauve',
+        path: path.resolve('src/theme/mauve-vars.scss'),
+    },
 ];
 module.exports = {
-  module: {
-    rules: [
-      {
-        test: /\.module.scss$/i,
-        use: [
-          {
-            loader: "css-loader",
-            options: {
-              importLoaders: 1,
-              modules: {
-                localIdentName:
-                  process.env.NODE_ENV === "production"
-                    ? "[hash:base64:5]"
-                    : "[path][name]_[local]-[hash:base64:5]",
-                //使用 getLocalIdent 自定义模块化名称 ， css-loader v4.0+
-                getLocalIdent: (
-                  loaderContext,
-                  localIdentName,
-                  localName,
-                  options
-                ) => {
-                  if (
-                    multipleScopeVars.some(
-                      (item) => item.scopeName === localName
-                    )
-                  ) {
-                    //localName 属于 multipleScopeVars 的不用模块化
-                    return localName;
-                  }
-                  const { context, hashPrefix } = options;
-                  const { resourcePath } = loaderContext;
-                  const request = normalizePath(
-                    path.relative(context, resourcePath)
-                  );
-                  // eslint-disable-next-line no-param-reassign
-                  options.content = `${hashPrefix + request}\x00${localName}`;
-                  const inname = interpolateName(
-                    loaderContext,
-                    localIdentName,
-                    options
-                  );
+    module: {
+        rules: [
+            {
+                test: /\.module.scss$/i,
+                use: [
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            importLoaders: 1,
+                            modules: {
+                                localIdentName:
+                                    process.env.NODE_ENV === 'production'
+                                        ? '[hash:base64:5]'
+                                        : '[path][name]_[local]-[hash:base64:5]',
+                                //使用 getLocalIdent 自定义模块化名称 ， css-loader v4.0+
+                                getLocalIdent: (
+                                    loaderContext,
+                                    localIdentName,
+                                    localName,
+                                    options
+                                ) => {
+                                    if (
+                                        multipleScopeVars.some(
+                                            (item) =>
+                                                item.scopeName === localName
+                                        )
+                                    ) {
+                                        //localName 属于 multipleScopeVars 的不用模块化
+                                        return localName;
+                                    }
+                                    const { context, hashPrefix } = options;
+                                    const { resourcePath } = loaderContext;
+                                    const request = normalizePath(
+                                        path.relative(context, resourcePath)
+                                    );
+                                    // eslint-disable-next-line no-param-reassign
+                                    options.content = `${
+                                        hashPrefix + request
+                                    }\x00${localName}`;
+                                    const inname = interpolateName(
+                                        loaderContext,
+                                        localIdentName,
+                                        options
+                                    );
 
-                  return inname.replace(/\\?\[local\\?]/gi, localName);
-                },
-              },
+                                    return inname.replace(
+                                        /\\?\[local\\?]/gi,
+                                        localName
+                                    );
+                                },
+                            },
+                        },
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                            implementation: getSass({
+                                // getMultipleScopeVars优先于 sassOptions.multipleScopeVars
+                                getMultipleScopeVars: (sassOptions) =>
+                                    multipleScopeVars,
+                                // 可选项
+                                // implementation:sass
+                            }),
+                        },
+                    },
+                ],
             },
-          },
-          {
-            loader: "sass-loader",
-            options: {
-              implementation: getSass({
-                // getMultipleScopeVars优先于 sassOptions.multipleScopeVars
-                getMultipleScopeVars: (sassOptions) => multipleScopeVars,
-                // 可选项
-                // implementation:sass
-              }),
-            },
-          },
         ],
-      },
-    ],
-  },
+    },
 };
 ```
 
@@ -336,22 +356,22 @@ Type `string`
 
 ```js
 const multipleScopeVars = [
-  {
-    scopeName: "theme-default",
-    path: path.resolve("src/theme/default-vars.less"),
-  },
-  {
-    scopeName: "theme-mauve",
-    path: path.resolve("src/theme/mauve-vars.less"),
-  },
+    {
+        scopeName: 'theme-default',
+        path: path.resolve('src/theme/default-vars.less'),
+    },
+    {
+        scopeName: 'theme-mauve',
+        path: path.resolve('src/theme/mauve-vars.less'),
+    },
 ];
 const allStyleVarFiles = getAllStyleVarFiles(
-  {
-    emitError: (msg) => {
-      throw new Error(msg);
+    {
+        emitError: (msg) => {
+            throw new Error(msg);
+        },
     },
-  },
-  { multipleScopeVars }
+    { multipleScopeVars }
 );
 ```
 
@@ -362,8 +382,8 @@ Type `Function`
 用于获取 multipleScopeVars[].path 文件的内容
 
 ```js
-const lessVarscontent = getVarsContent(allStyleVarFiles[0].path, "less");
-const sassVarscontent = getVarsContent(allStyleVarFiles[0].path, "sass");
+const lessVarscontent = getVarsContent(allStyleVarFiles[0].path, 'less');
+const sassVarscontent = getVarsContent(allStyleVarFiles[0].path, 'sass');
 ```
 
 ## getScopeProcessResult
@@ -374,10 +394,10 @@ Type `Function`
 
 ```js
 const result = getScopeProcessResult(
-  [
-    {
-      map: sourceMap || null,
-      code: `
+    [
+        {
+            map: sourceMap || null,
+            code: `
         .un-btn {
             position: relative;
             background-color: #0081ff;
@@ -385,11 +405,11 @@ const result = getScopeProcessResult(
         .un-btn .anticon {
             line-height: 1;
         }`,
-      deps: ["E:\\sub\\panel1.less", "E:\\sub\\panel2.less"],
-    },
-    {
-      map: sourceMap || null,
-      code: `
+            deps: ['E:\\sub\\panel1.less', 'E:\\sub\\panel2.less'],
+        },
+        {
+            map: sourceMap || null,
+            code: `
         .un-btn {
             position: relative;
             background-color: #9c26b0;
@@ -397,14 +417,14 @@ const result = getScopeProcessResult(
         .un-btn .anticon {
             line-height: 1;
         }`,
-      deps: ["E:\\sub\\panel1.less", "E:\\sub\\panel2.less"],
-    },
-  ],
-  [
-    { scopeName: "theme-default", path: "E:\\sub\\default-vars.less" },
-    { scopeName: "theme-mauve", path: "E:\\sub\\mauve-vars.less" },
-  ],
-  "E:\\sub\\style.less"
+            deps: ['E:\\sub\\panel1.less', 'E:\\sub\\panel2.less'],
+        },
+    ],
+    [
+        { scopeName: 'theme-default', path: 'E:\\sub\\default-vars.less' },
+        { scopeName: 'theme-mauve', path: 'E:\\sub\\mauve-vars.less' },
+    ],
+    'E:\\sub\\style.less'
 );
 
 //result
