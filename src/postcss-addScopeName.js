@@ -29,30 +29,18 @@ export default (
                         themeRule.type === 'rule' &&
                         themeRule.selector === rule.selector
                     ) {
-                        let childNodes = [];
-                        rule.nodes.forEach((cn) => {
-                            if (cn.type === 'decl') {
-                                // 过滤出样式属性相同，值不同的节点
-                                const decls = themeRule.nodes.filter((ccn) => {
-                                    if (ccn.type !== 'decl') {
-                                        return false;
-                                    }
-
-                                    if (
-                                        ccn.prop === cn.prop &&
-                                        ccn.value !== cn.value
-                                    ) {
-                                        currentThemeProps[cn.prop] = cn.value;
-                                        return true;
-                                    }
-
-                                    return false;
-                                });
-
-                                childNodes = childNodes.concat(decls);
-                                decls.forEach((n) => {
-                                    themeRule.removeChild(n);
-                                });
+                        const childNodes = [];
+                        rule.nodes.forEach((cn, cindex) => {
+                            // 过滤出样式属性相同，值不同的节点
+                            const themeNode = themeRule.nodes[cindex];
+                            if (
+                                themeNode.type === 'decl' &&
+                                cn.type === 'decl' &&
+                                themeNode.prop === cn.prop &&
+                                themeNode.value !== cn.value
+                            ) {
+                                childNodes.push(themeNode);
+                                currentThemeProps[cn.prop] = cn.value;
                             }
                         });
 
