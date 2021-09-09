@@ -11,8 +11,17 @@ export default (
     return {
         postcssPlugin: 'postcss-addScopeName',
         Rule(rule) {
+            // 与当前样式规则不相同的其他主题样式规则
             const themeRules = [];
+            // 当前规则中与其他主题规则中不相同的属性
             const currentThemeProps = {};
+            // 当前规则中所有属性，按顺序去重
+            const currentRuleNodeMap = {};
+            rule.nodes.forEach((node) => {
+                if (node.type === 'decl') {
+                    currentRuleNodeMap[node.prop] = node;
+                }
+            });
             restCssAsts.forEach((root) => {
                 for (
                     let index = 0;
@@ -30,18 +39,31 @@ export default (
                         themeRule.selector === rule.selector
                     ) {
                         const childNodes = [];
-                        rule.nodes.forEach((cn, cindex) => {
-                            // 过滤出样式属性相同，值不同的节点
-                            const themeNode = themeRule.nodes[cindex];
-                            if (
-                                themeNode.type === 'decl' &&
-                                cn.type === 'decl' &&
-                                themeNode.prop === cn.prop &&
-                                themeNode.value !== cn.value
-                            ) {
-                                childNodes.push(themeNode);
-                                currentThemeProps[cn.prop] = cn.value;
+                        // 先将主题规则属性按顺序去重
+                        const themeRuleNodeMap = {};
+                        themeRule.nodes.forEach((node) => {
+                            if (node.type === 'decl') {
+                                themeRuleNodeMap[node.prop] = node;
                             }
+                        });
+                        Object.keys(currentRuleNodeMap).forEach((prop) => {
+                            if (!themeRuleNodeMap[prop]) {
+                                return;
+                            }
+                            // 比对属性值不相等的就进行分离
+                            if (
+                                currentRuleNodeMap[prop].value !==
+                                themeRuleNodeMap[prop].value
+                            ) {
+                                childNodes.push(themeRuleNodeMap[prop]);
+                                currentThemeProps[prop] =
+                                    currentRuleNodeMap[prop].value;
+                                delete themeRuleNodeMap[prop];
+                            }
+                        });
+                        // 假如比对后还有剩余，也纳入主题属性
+                        Object.keys(themeRuleNodeMap).forEach((prop) => {
+                            childNodes.push(themeRuleNodeMap[prop]);
                         });
 
                         themeRule.nodes = childNodes;
