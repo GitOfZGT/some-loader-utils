@@ -12,7 +12,16 @@ import {
  */
 export function getLess(opt = {}) {
     const packname = 'less';
-    const less = opt.implementation || require(packname);
+    let less = opt.implementation;
+    if (!less) {
+        try {
+            less = require(packname);
+        } catch (e) {
+            throw new Error(
+                `Dependency "${packname}" not found. Did you install it?`
+            );
+        }
+    }
     const { render } = less;
     // eslint-disable-next-line func-names
     less.render = function (input, options = {}, callback) {

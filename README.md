@@ -1,21 +1,13 @@
 # @zougt/some-loader-utils
 
-开始作为[`@zougt/less-loader`](https://github.com/GitOfZGT/less-loader)和[`@zougt/sass-loader`](https://github.com/GitOfZGT/less-loader)的公共依赖
-
-提供了方法：
-
--   [getAllStyleVarFiles](#getAllStyleVarFiles)
--   [getVarsContent](#getVarsContent)
--   [getScopeProcessResult](#getScopeProcessResult)
-
-之后可能不再维护[`@zougt/less-loader`](https://github.com/GitOfZGT/less-loader)和[`@zougt/sass-loader`](https://github.com/GitOfZGT/less-loader)同步 fork 更新，提供了[`less-loader`](https://github.com/webpack-contrib/less-loader)和[`sass-loader`](https://github.com/webpack-contrib/sass-loader)的 `implementation` 版本的多主题变量文件编译方案的方法：
+提供了[`less-loader`](https://github.com/webpack-contrib/less-loader)和[`sass-loader`](https://github.com/webpack-contrib/sass-loader)的 `implementation` 版本的多主题变量文件编译方案的方法：
 
 -   [getLess](#getLess)
 -   [getSass](#getSass)
 
-使得基于`less`、`sass`的(新、旧)项目实现在线预设主题的动态切换变得很简单，并且兼容性最好。
+使得基于`less`、`sass`的(新、旧)项目实现在线预设主题的动态切换变得很简单，并且兼容性最好，很优雅的一种实现方案。
 
-![主题切换效果](./example.gif)
+![主题切换效果](./images/example.gif)
 
 ## 安装与使用
 
@@ -45,6 +37,12 @@ const multipleScopeVars = [
     {
         scopeName: 'theme-default',
         path: path.resolve('src/theme/default-vars.less'),
+        // v1.3.0 支持 includeStyles
+        includeStyles: {
+            '.el-button--primary:hover, .el-button--primary:focus': {
+                color: '#FFFFFF',
+            },
+        },
     },
     {
         scopeName: 'theme-mauve',
@@ -106,7 +104,7 @@ module.exports = {
         rules: [
             {
                 test: /\.scss$/i,
-                 // 请确保支持 implementation 属性的 sass-loader版本
+                // 请确保支持 implementation 属性的 sass-loader版本
                 loader: 'sass-loader',
                 options: {
                     sassOptions: {
@@ -374,6 +372,81 @@ const allStyleVarFiles = getAllStyleVarFiles(
     { multipleScopeVars }
 );
 ```
+
+### multipleScopeVars[].includeStyles
+
+> v1.3.0 支持 includeStyles
+
+Type: `Object`
+
+当存在以下情况时，可以用这个属性处理
+
+```css
+.theme-blue .el-button:focus,
+.theme-blue .el-button:hover {
+    /*这里的color值由 $primary-color 编译得来的，所以选择器前面加了 .theme-blue 提高了权重*/
+    color: #0281ff;
+    border-color: #b3d9ff;
+    background-color: #e6f2ff;
+}
+.el-button--primary:focus,
+.el-button--primary:hover {
+    /*这里的color值不是由 变量 编译得来的，这时就会被上面那个 color 覆盖了， 实际上这里的color才是需要的效果*/
+    color: #fff;
+}
+```
+
+```js
+const includeStyles = {
+    '.el-button--primary:hover, .el-button--primary:focus': {
+        color: '#FFFFFF',
+    },
+};
+const multipleScopeVars = [
+    {
+        scopeName: 'theme-default',
+        path: path.resolve('src/theme/default-vars.less'),
+        includeStyles
+    },
+    {
+        scopeName: 'theme-mauve',
+        path: path.resolve('src/theme/mauve-vars.less'),
+        includeStyles
+    },
+];
+const allStyleVarFiles = getAllStyleVarFiles(
+    {
+        emitError: (msg) => {
+            throw new Error(msg);
+        },
+    },
+    { multipleScopeVars }
+);
+```
+
+得到
+
+```css
+.theme-blue .el-button:focus,
+.theme-blue .el-button:hover {
+    /*这里的color值由 $primary-color 编译得来的，所以选择器前面加了 .theme-blue 提高了权重*/
+    color: #0281ff;
+    border-color: #b3d9ff;
+    background-color: #e6f2ff;
+}
+.theme-blue .el-button--primary:focus,
+.theme-blue .el-button--primary:hover {
+    /*这里的color值不是由 变量 编译得来的，这时就会被上面那个 color 覆盖了， 实际上这里的color才是需要的效果*/
+    color: #FFFFFF;
+}
+```
+出现权重问题效果图
+
+![includeStyles](./images/includeStyles_p.png)
+
+使用了 includeStyles 的效果图
+
+![includeStyles](./images/includeStyles_r.png)
 
 ## getVarsContent
 

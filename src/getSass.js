@@ -15,8 +15,16 @@ import {
 export function getSass(opt = {}) {
   const packname = "sass";
 
-  const sass = opt.implementation || require(packname);
-
+  let sass = opt.implementation;
+  if (!sass) {
+    try {
+      sass = require(packname);
+    } catch (e) {
+        throw new Error(
+            `Dependency "${packname}" not found. Did you install it?`
+        );
+    }
+}
   const { render } = sass;
 
   // eslint-disable-next-line func-names
