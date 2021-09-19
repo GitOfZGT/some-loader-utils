@@ -28,6 +28,8 @@ used in [`less-loader`](https://github.com/webpack-contrib/less-loader)
 
 > 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到 less 变量提升的作用
 
+[multipleScopeVars](#multiplescopevars) 的属性在文档往下的内容有描述
+
 ```js
 const path = require('path');
 // const less = require("less");
@@ -344,6 +346,10 @@ Type `Function`
 
 ### multipleScopeVars
 
+必需的
+
+> 当 multipleScopeVars 只有一项时， scopeName 就没有意义，但是 path 可以起到 变量提升的作用
+
 Type `object[]`
 
 #### multipleScopeVars[].scopeName
@@ -351,6 +357,10 @@ Type `object[]`
 Type `string`
 
 #### multipleScopeVars[].path
+
+必需的，变量文件的绝对路径
+
+Type `string`
 
 ```js
 const multipleScopeVars = [
