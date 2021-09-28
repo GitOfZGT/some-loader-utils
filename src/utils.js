@@ -10,18 +10,6 @@ const getAllStyleVarFiles = (loaderContext, options) => {
     if (Array.isArray(styleVarFiles)) {
         if (styleVarFiles.length === 1) {
             allStyleVarFiles = styleVarFiles.map((item) => {
-                if (
-                    !item.path ||
-                    typeof item.path !== 'string' ||
-                    !fs.existsSync(item.path)
-                ) {
-                    loaderContext.emitError(
-                        new Error(
-                            `Not found path: ${item.path} in multipleScopeVars`
-                        )
-                    );
-                    return { scopeName: '', path: '' };
-                }
                 if (Array.isArray(item.path)) {
                     const exist = item.path.every((pathstr) => {
                         const exists = pathstr && fs.existsSync(pathstr);
@@ -37,6 +25,17 @@ const getAllStyleVarFiles = (loaderContext, options) => {
                     if (!exist) {
                         return { scopeName: '', path: '' };
                     }
+                } else if (
+                    !item.path ||
+                    typeof item.path !== 'string' ||
+                    !fs.existsSync(item.path)
+                ) {
+                    loaderContext.emitError(
+                        new Error(
+                            `Not found path: ${item.path} in multipleScopeVars`
+                        )
+                    );
+                    return { scopeName: '', path: '' };
                 }
                 return { ...item, scopeName: '' };
             });
