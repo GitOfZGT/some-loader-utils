@@ -2,8 +2,8 @@
 
 提供了[`less-loader`](https://github.com/webpack-contrib/less-loader)和[`sass-loader`](https://github.com/webpack-contrib/sass-loader)的 `implementation` 版本的多主题变量文件编译方案的方法：
 
--   [getLess](#getLess)
--   [getSass](#getSass)
+-   [getLess](#getLess)，本质上不是针对 less-loader 的扩展，而是[less包](https://github.com/less/less.js)的扩展，所以不只是用在 less-loader
+-   [getSass](#getSass)，本质上不是针对 sass-loader 的扩展，而是[sass包](https://github.com/sass/dart-sass)的扩展，所以不只是用在 sass-loader
 
 使得基于`less`、`sass`的(新、旧)项目实现在线预设主题的动态切换变得很简单，并且兼容性最好，很优雅的一种实现方案。
 
@@ -416,12 +416,12 @@ const multipleScopeVars = [
     {
         scopeName: 'theme-default',
         path: path.resolve('src/theme/default-vars.less'),
-        includeStyles
+        includeStyles,
     },
     {
         scopeName: 'theme-mauve',
         path: path.resolve('src/theme/mauve-vars.less'),
-        includeStyles
+        includeStyles,
     },
 ];
 const allStyleVarFiles = getAllStyleVarFiles(
@@ -447,9 +447,10 @@ const allStyleVarFiles = getAllStyleVarFiles(
 .theme-blue .el-button--primary:focus,
 .theme-blue .el-button--primary:hover {
     /*这里的color值不是由 变量 编译得来的，这时就会被上面那个 color 覆盖了， 实际上这里的color才是需要的效果*/
-    color: #FFFFFF;
+    color: #ffffff;
 }
 ```
+
 出现权重问题效果图
 
 ![includeStyles](./images/includeStyles_p.png)
