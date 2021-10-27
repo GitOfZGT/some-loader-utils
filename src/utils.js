@@ -7,7 +7,7 @@ import postcssAddScopeName from './postcss-addScopeName';
 const getAllStyleVarFiles = (loaderContext, options) => {
     const styleVarFiles = options.multipleScopeVars;
     let allStyleVarFiles = [{ scopeName: '', path: '' }];
-    if (Array.isArray(styleVarFiles)) {
+    if (Array.isArray(styleVarFiles) && styleVarFiles.length) {
         if (styleVarFiles.length === 1) {
             allStyleVarFiles = styleVarFiles.map((item) => {
                 if (Array.isArray(item.path)) {
@@ -143,7 +143,10 @@ const getScopeProcessResult = (
             }
         });
     });
-
+    preprocessResult.deps = [
+        ...preprocessResult.deps,
+        ...(cssResults[0].deps || []),
+    ];
     /**
      * 用cssResults的第一个css内容进入postcss
      */
