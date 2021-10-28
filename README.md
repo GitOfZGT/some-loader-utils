@@ -424,14 +424,6 @@ const multipleScopeVars = [
         includeStyles,
     },
 ];
-const allStyleVarFiles = getAllStyleVarFiles(
-    {
-        emitError: (msg) => {
-            throw new Error(msg);
-        },
-    },
-    { multipleScopeVars }
-);
 ```
 
 得到
@@ -446,7 +438,7 @@ const allStyleVarFiles = getAllStyleVarFiles(
 }
 .theme-blue .el-button--primary:focus,
 .theme-blue .el-button--primary:hover {
-    /*这里的color值不是由 变量 编译得来的，这时就会被上面那个 color 覆盖了， 实际上这里的color才是需要的效果*/
+    /*这里的color值不是由 变量 编译得来的，通过includeStyles也提高了权重得到实际的效果*/
     color: #ffffff;
 }
 ```
