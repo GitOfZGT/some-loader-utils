@@ -96,17 +96,32 @@ export default (
             });
 
             if (themeRules.length) {
-                const ruleClone = rule.clone();
-                ruleClone.removeAll();
+                const firstThemeRule = rule.clone();
+                firstThemeRule.removeAll();
                 Object.keys(currentThemeProps).forEach((key) => {
-                    ruleClone.append({
+                    for (let index = 0; index < themeRules.length; index++) {
+                        const tRule = themeRules[index];
+                        // 如果当前规则的样式属性在其他主题规则中不存在，说明该样式属性是所有主题样式属性，但是在上面比对中发现值一致未被添加，这里要添加回去
+                        if (
+                            !tRule.nodes.some(
+                                (node) =>
+                                    node.type === 'decl' && node.prop === key
+                            )
+                        ) {
+                            tRule.append({
+                                prop: key,
+                                value: currentThemeProps[key],
+                            });
+                        }
+                    }
+                    firstThemeRule.append({
                         prop: key,
                         value: currentThemeProps[key],
                     });
                 });
 
                 // 保持themeRules的顺序对应 opts.allStyleVarFiles的顺序，然后添加scopeName
-                themeRules.splice(opts.startIndex, 0, ruleClone);
+                themeRules.splice(opts.startIndex, 0, firstThemeRule);
                 themeRules.forEach((item, i) => {
                     if (item && item.nodes.length) {
                         // eslint-disable-next-line no-param-reassign
