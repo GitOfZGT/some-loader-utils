@@ -13,7 +13,7 @@ export default (
                 (word) => `${word}.${scopeName}`
             );
         }
-        return `.${scopeName} ${selector}`;
+        return `.${scopeName}\x20${selector}`;
     }
     // allStyleVarFiles的个数与allCssCodes对应的
     // 除去startIndex的，其他的css转成ast
@@ -69,7 +69,7 @@ export default (
                             ) {
                                 childNodes.push(themeRuleNodeMap[prop]);
                                 currentThemeProps[prop] =
-                                    currentRuleNodeMap[prop].value;
+                                    currentRuleNodeMap[prop];
                             }
                             delete themeRuleNodeMap[prop];
                         });
@@ -89,7 +89,7 @@ export default (
             rule.nodes.forEach((node) => {
                 if (
                     node.type === 'decl' &&
-                    currentThemeProps[node.prop] === node.value
+                    currentThemeProps[node.prop] === node
                 ) {
                     node.remove();
                 }
@@ -108,16 +108,10 @@ export default (
                                     node.type === 'decl' && node.prop === key
                             )
                         ) {
-                            tRule.append({
-                                prop: key,
-                                value: currentThemeProps[key],
-                            });
+                            tRule.append(currentThemeProps[key].clone());
                         }
                     }
-                    firstThemeRule.append({
-                        prop: key,
-                        value: currentThemeProps[key],
-                    });
+                    firstThemeRule.append(currentThemeProps[key].clone());
                 });
 
                 // 保持themeRules的顺序对应 opts.allStyleVarFiles的顺序，然后添加scopeName
