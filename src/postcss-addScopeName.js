@@ -7,6 +7,9 @@ export default (
 ) => {
     const { allStyleVarFiles } = opts;
     function addScopeName(selector, scopeName) {
+        if (/^:root/i.test(selector)) {
+            return `.${scopeName}${selector}`;
+        }
         if (/^html/i.test(selector)) {
             return selector.replace(
                 /^html[^\s]*(?=\s*)/gi,
