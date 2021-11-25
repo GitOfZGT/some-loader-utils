@@ -2,6 +2,8 @@ import {
     getScopeProcessResult,
     getAllStyleVarFiles,
     getVarsContent,
+    removeThemeFiles,
+    createArbitraryModeVarColors
 } from './utils';
 /**
  *
@@ -22,6 +24,9 @@ export function getLess(opt = {}) {
             );
         }
     }
+
+    removeThemeFiles();
+
     const { render } = less;
     // eslint-disable-next-line func-names
     less.render = function (input, options = {}, callback) {
@@ -40,13 +45,16 @@ export function getLess(opt = {}) {
                     throw new Error(msg);
                 },
             },
-            { multipleScopeVars }
+            { multipleScopeVars, arbitraryMode: opt.arbitraryMode }
         );
         const preProcessor = (code) => render.call(less, code, renderOptions);
         // 按allStyleVarFiles的个数对当前文件编译多次得到多个结果
         const rePromise = Promise.all(
             allStyleVarFiles.map((file) => {
                 const varscontent = getVarsContent(file.path, packname);
+                if(opt.arbitraryMode){
+                    createArbitraryModeVarColors(varscontent)
+                }
                 return preProcessor(`${input}\n${varscontent}`);
             })
         )
@@ -56,7 +64,8 @@ export function getLess(opt = {}) {
                         return { ...item, code: item.css, deps: item.imports };
                     }),
                     allStyleVarFiles,
-                    renderOptions.filename
+                    renderOptions.filename,
+                    opt.arbitraryMode
                 )
             )
             .then((result) => {

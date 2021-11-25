@@ -1,13 +1,32 @@
-import fs from 'fs';
+/* eslint-disable import/no-dynamic-require */
+/* eslint-disable import/extensions */
+/* eslint-disable import/no-unresolved */
+
+import fs from 'fs-extra';
+
+import { v5 as uuidv5 } from 'uuid';
 
 import postcss from 'postcss';
 
+import cssnano from 'cssnano';
+
+import advanced from 'cssnano-preset-advanced';
+
 import postcssAddScopeName from './postcss-addScopeName';
 
+import { colorValueReg } from './arbitraryMode/utils';
+
+import browerColorMap from './arbitraryMode/colors';
+
+import { getCurrentPackRequirePath } from './packPath';
+
 const getAllStyleVarFiles = (loaderContext, options) => {
-    const styleVarFiles = options.multipleScopeVars;
+    let styleVarFiles = options.multipleScopeVars;
     let allStyleVarFiles = [{ scopeName: '', path: '' }];
     if (Array.isArray(styleVarFiles) && styleVarFiles.length) {
+        if (options.arbitraryMode) {
+            styleVarFiles = styleVarFiles.slice(0, 1);
+        }
         if (styleVarFiles.length === 1) {
             allStyleVarFiles = styleVarFiles.map((item) => {
                 if (Array.isArray(item.path)) {
@@ -37,9 +56,17 @@ const getAllStyleVarFiles = (loaderContext, options) => {
                     );
                     return { scopeName: '', path: '' };
                 }
+                if (options.arbitraryMode) {
+                    if (!item.scopeName) {
+                        return { ...item, scopeName: 'theme-default' };
+                    }
+                    return item;
+                }
                 return { ...item, scopeName: '' };
             });
-            return allStyleVarFiles;
+            return (
+                options.arbitraryMode ? [{ scopeName: '', path: '' }] : []
+            ).concat(allStyleVarFiles.filter((item) => !!item.path));
         }
         allStyleVarFiles = styleVarFiles.filter((item) => {
             if (!item.scopeName) {
@@ -121,7 +148,8 @@ const getAllStyleVarFiles = (loaderContext, options) => {
 const getScopeProcessResult = (
     cssResults = [],
     allStyleVarFiles = [],
-    resourcePath
+    resourcePath,
+    arbitraryMode
 ) => {
     const preprocessResult = { deps: [], code: '', errors: [] };
     if (cssResults.length === 1) {
@@ -151,19 +179,58 @@ const getScopeProcessResult = (
      * 用cssResults的第一个css内容进入postcss
      */
     const startIndex = 0;
+    const themeRuleValues = new Set();
+    const themeRuleMap = {};
     return postcss([
-        postcssAddScopeName({
-            allStyleVarFiles,
-            allCssCodes: cssResults.map((r) => r.code),
-            // 除去allCssCodes中的第几个
-            startIndex,
-        }),
+        postcssAddScopeName(
+            {
+                allStyleVarFiles,
+                allCssCodes: cssResults.map((r) => r.code),
+                // 除去allCssCodes中的第几个
+                startIndex,
+                arbitraryMode,
+            },
+            themeRuleValues,
+            themeRuleMap
+        ),
     ])
         .process(cssResults[startIndex].code, {
             from: resourcePath,
             to: resourcePath,
         })
         .then((postResult) => {
+            const MY_NAMESPACE = '1b671a64-40d5-491e-99b0-da01ff1f3341';
+            const filename = uuidv5(resourcePath, MY_NAMESPACE);
+            const dirName = 'extractTheme';
+            const targetRsoleved = getCurrentPackRequirePath();
+            if (!fs.existsSync(`${targetRsoleved}/${dirName}`)) {
+                fs.mkdirSync(`${targetRsoleved}/${dirName}`);
+            }
+            const cssRules = {};
+            for (const key in themeRuleMap) {
+                if (Object.hasOwnProperty.call(themeRuleMap, key)) {
+                    const ruleSet = themeRuleMap[key];
+                    const cssArr = Array.from(ruleSet);
+                    if (cssArr.length) {
+                        cssRules[key] = cssArr;
+                    }
+                }
+            }
+            const themeRuleValuesArr = Array.from(themeRuleValues);
+            if (Object.keys(cssRules).length) {
+                fs.writeFileSync(
+                    `${targetRsoleved}/${dirName}/${filename}.js`,
+                    `exports.cssRules = ${JSON.stringify(
+                        cssRules,
+                        null,
+                        4
+                    )};\nexports.ruleValues=${JSON.stringify(
+                        themeRuleValuesArr,
+                        null,
+                        4
+                    )}`
+                );
+            }
             preprocessResult.code = postResult.css;
             return preprocessResult;
         });
@@ -204,6 +271,41 @@ const getVarsContent = (url, type) => {
     }
     return content;
 };
+function removeThemeFiles() {
+    const dirName = 'extractTheme';
+    const targetRsoleved = getCurrentPackRequirePath();
+    if (fs.existsSync(`${targetRsoleved}/${dirName}`)) {
+        fs.removeSync(`${targetRsoleved}/${dirName}`);
+    }
+}
+function getExtractThemeCode() {
+    const targetRsoleved = getCurrentPackRequirePath();
+    const dirName = 'extractTheme';
+    if (fs.existsSync(`${targetRsoleved}/${dirName}`)) {
+        const files = fs.readdirSync(`${targetRsoleved}/${dirName}`);
+        const themeRuleCodes = {};
+        let themeRuleValues = [];
+        files.forEach((file) => {
+            const {
+                cssRules,
+                ruleValues,
+                // eslint-disable-next-line global-require
+            } = require(`${targetRsoleved}/${dirName}/${file}`);
+
+            Object.keys(cssRules).forEach((key) => {
+                let scopeCssArr = themeRuleCodes[key] || [];
+                scopeCssArr = scopeCssArr.concat(cssRules[key]);
+                themeRuleCodes[key] = scopeCssArr;
+            });
+            themeRuleValues = themeRuleValues.concat(ruleValues);
+        });
+        return {
+            themeRuleCodes,
+            themeRuleValues: Array.from(new Set(themeRuleValues)),
+        };
+    }
+    return { themeRules: {}, themeRuleValues: [] };
+}
 /**
  * getScropProcessResult 修正命名 getScopeProcessResult后的兼容
  */
@@ -211,65 +313,40 @@ const getScropProcessResult = getScopeProcessResult;
 /**
  *
  * @param {Object} options
- * @param {String} options.css css内容
- * @param {Array} options.multipleScopeVars [{scopeName:"theme-default"}]
  * @param {Boolean} options.removeCssScopeName 抽取的css是否移除scopeName
  * @returns { css: String, themeCss: Object , themeCommonCss: String }
  */
-const extractThemeCss = ({ css, multipleScopeVars, removeCssScopeName }) => {
-    let content = css;
-    const themeCss = {};
-    let themeCommonCss = '';
-    if (
-        typeof content === 'string' &&
-        content &&
-        Array.isArray(multipleScopeVars)
-    ) {
-        let newContent = content;
-        const classNameFrags = content.match(/\w*\.[^{}/\\]+{[^{}]*?}/g) || [];
-        classNameFrags.forEach((frag) => {
-            const isCommon = multipleScopeVars.every(
-                (item) =>
-                    item.scopeName &&
-                    new RegExp(`\\.${item.scopeName}`).test(frag)
-            );
-            if (isCommon) {
-                newContent = newContent.replace(frag, '');
-                themeCommonCss = `${themeCommonCss}${
-                    removeCssScopeName
-                        ? multipleScopeVars.reduce(
-                              (tol, item) =>
-                                  tol.replace(
-                                      new RegExp(`\\.${item.scopeName}`, 'g'),
-                                      ''
-                                  ),
-                              frag
-                          )
-                        : frag
-                }`;
-                return;
-            }
-            const hasScope = multipleScopeVars.find(
-                (item) =>
-                    item.scopeName &&
-                    new RegExp(`\\.${item.scopeName}`).test(frag)
-            );
-            if (hasScope) {
-                newContent = newContent.replace(frag, '');
-                const scopeFrags = themeCss[hasScope.scopeName] || '';
-                themeCss[hasScope.scopeName] = `${scopeFrags}${
-                    removeCssScopeName
-                        ? frag.replace(
-                              new RegExp(`\\.${hasScope.scopeName}`, 'g'),
-                              ''
-                          )
-                        : frag
-                }`;
-            }
+const extractThemeCss = ({ removeCssScopeName }) => {
+    const { themeRuleCodes } = getExtractThemeCode();
+
+    const allPro = Object.keys(themeRuleCodes).map((key) => {
+        const codes = (
+            removeCssScopeName
+                ? themeRuleCodes[key].map((frag) =>
+                      frag.replace(new RegExp(`\\.${key}`, 'g'), '')
+                  )
+                : themeRuleCodes[key]
+        ).join('');
+        return postcss([
+            cssnano({
+                preset: advanced({
+                    reduceIdents: { keyframes: false },
+                    zindex: false,
+                }),
+            }),
+        ])
+            .process(codes)
+            .then((postResult) => {
+                return { key, css: postResult.css };
+            });
+    });
+    return Promise.all(allPro).then((res) => {
+        const themeCss = {};
+        res.forEach((item) => {
+            themeCss[item.key] = item.css;
         });
-        content = newContent;
-    }
-    return { css: content, themeCss, themeCommonCss };
+        return { themeCss };
+    });
 };
 
 const addScopnameToHtmlClassname = (html, defaultScopeName) => {
@@ -306,6 +383,54 @@ const addScopnameToHtmlClassname = (html, defaultScopeName) => {
     return newHtml;
 };
 
+function createArbitraryModeVarColors(filecontent) {
+    if (filecontent) {
+        const hex = (filecontent.match(colorValueReg.hex) || []).map((color) =>
+            color.replace(/\s+/g, '')
+        );
+        const rgb = (filecontent.match(colorValueReg.rgb) || []).map((color) =>
+            color.replace(/\s+/g, '')
+        );
+        const rgba = (filecontent.match(colorValueReg.rgba) || []).map(
+            (color) => color.replace(/\s+/g, '')
+        );
+        const hsl = (filecontent.match(colorValueReg.hsl) || []).map((color) =>
+            color.replace(/\s+/g, '').replace(/,0(?=,|\))/g, ',0%')
+        );
+        const hsla = (filecontent.match(colorValueReg.hsla) || []).map(
+            (color) => color.replace(/\s+/g, '').replace(/,0(?=,)/g, ',0%')
+        );
+        const browerColorReg = new RegExp(
+            `(?<=:\\s*)(${Object.keys(browerColorMap).join('|')})(?=\\s*)`,
+            'ig'
+        );
+        const browerColors = filecontent.match(browerColorReg) || [];
+        const colors = Array.from(
+            new Set(
+                browerColors
+                    .concat(hex)
+                    .concat(rgb)
+                    .concat(rgba)
+                    .concat(hsl)
+                    .concat(hsla)
+            )
+        );
+        const targetRsoleved = getCurrentPackRequirePath();
+        fs.writeFileSync(
+            `${targetRsoleved}/baseVarColors.js`,
+            `exports.baseVarColors=${JSON.stringify(colors)};`
+        );
+    }
+}
+
+function createPulignParamsFile(options = {}) {
+    const targetRsoleved = getCurrentPackRequirePath();
+    fs.writeFileSync(
+        `${targetRsoleved}/pulignParams.js`,
+        `module.exports = ${JSON.stringify(options)};`
+    );
+}
+
 export {
     getAllStyleVarFiles,
     getScopeProcessResult,
@@ -313,4 +438,8 @@ export {
     getVarsContent,
     extractThemeCss,
     addScopnameToHtmlClassname,
+    removeThemeFiles,
+    createArbitraryModeVarColors,
+    getCurrentPackRequirePath,
+    createPulignParamsFile,
 };
