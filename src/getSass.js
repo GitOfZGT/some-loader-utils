@@ -12,7 +12,7 @@ import {
  * @param {Object} opt
  * @param {Object} opt.implementation
  * @param {Function} opt.getMultipleScopeVars
- * @returns less
+ * @returns sass
  */
 export function getSass(opt = {}) {
     const packname = 'sass';

@@ -105,114 +105,143 @@ export default (
                     /* ast第一层节点属于选择器类型的
                      *  找到与rule选择器匹配的
                      */
-
-                    if (
+                    const isSameRule =
                         themeRule.type === 'rule' &&
-                        themeRule.selector === rule.selector
-                    ) {
+                        themeRule.selector === rule.selector;
+                    if (isSameRule) {
                         getThemeRules(themeRule);
                         break;
                     }
                     // 当这条规则在@media内
-                    else if (
+                    const isInMedia =
                         rule.parent.type === 'atrule' &&
-                        rule.parent.name === 'media'
-                    ) {
-                        if (
-                            themeRule.type === 'atrule' &&
-                            themeRule.name === 'media' &&
-                            themeRule.params === rule.parent.params
-                        ) {
-                            // 刚好是同一个@media时，就往里面找到匹配的规则处理
-                            for (
-                                let i = 0;
-                                i < (themeRule.nodes || []).length;
-                                i++
-                            ) {
-                                const atruleChild = themeRule.nodes[i];
-                                if (
-                                    atruleChild.type === 'rule' &&
-                                    atruleChild.selector === rule.selector
-                                ) {
-                                    getThemeRules(atruleChild);
-                                }
-                            }
-                            break;
+                        rule.parent.name === 'media';
+                    const isSameInMedia =
+                        themeRule.type === 'atrule' &&
+                        themeRule.name === 'media' &&
+                        themeRule.params === rule.parent.params;
+                    if (isInMedia && isSameInMedia) {
+                        // 刚好是同一个@media时，就往里面找到匹配的规则处理
+                        const atruleChild = (themeRule.nodes || []).find(
+                            (item) =>
+                                item.type === 'rule' &&
+                                item.selector === rule.selector
+                        );
+                        if (atruleChild) {
+                            getThemeRules(atruleChild);
                         }
+
+                        break;
                     }
                     // 当这条规则在@keyframes内
-                    else if (
+                    const isInKeyframes =
                         rule.parent.type === 'atrule' &&
-                        rule.parent.name === 'keyframes'
-                    ) {
+                        rule.parent.name === 'keyframes';
+                    if (isInKeyframes) {
                         // 又当@keyframes在@media内部时
-                        if (
+                        const isKeyframeInMedia =
                             rule.parent.parent &&
                             rule.parent.parent.type === 'atrule' &&
-                            rule.parent.parent.name === 'media'
-                        ) {
+                            rule.parent.parent.name === 'media';
+                        const isSameKeyframeInMedia =
+                            themeRule.type === 'atrule' &&
+                            themeRule.name === 'media' &&
+                            rule.parent.parent &&
+                            rule.parent.parent.params === themeRule.params;
+                        if (isKeyframeInMedia && isSameKeyframeInMedia) {
                             // 当刚好是同一个@media，往里面找到匹配的@keyframes
-                            if (
-                                themeRule.type === 'atrule' &&
-                                themeRule.name === 'media' &&
-                                rule.parent.parent.params === themeRule.params
-                            ) {
-                                for (
-                                    let i = 0;
-                                    i < (themeRule.nodes || []).length;
-                                    i++
-                                ) {
-                                    const atruleChild = themeRule.nodes[i];
-                                    if (
-                                        atruleChild.type === 'atrule' &&
-                                        atruleChild.name === 'keyframes' &&
-                                        atruleChild.params ===
-                                            rule.parent.params
-                                    ) {
-                                        if (!arbitraryMode) {
-                                            currentThemeKeyframes.push(
-                                                atruleChild.clone()
-                                            );
-                                            const currentMedia =
-                                                rule.parent.parent.clone();
-                                            currentMedia.removeAll();
-                                            currentMedia.append(
-                                                rule.parent.clone()
-                                            );
-                                            extractThemeKeyframesMap[
-                                                allStyleVarFiles[
-                                                    opts.startIndex
-                                                ].scopeName
-                                            ] = currentMedia;
-                                        }
-                                        const media = themeRule.clone();
-                                        media.removeAll();
-                                        media.append(atruleChild.clone());
-                                        extractThemeKeyframesMap[
-                                            restVarFiles[i].scopeName
-                                        ] = media;
-                                        atruleChild.remove();
-                                        break;
+                            const atruleChild = (themeRule.nodes || []).find(
+                                (item) =>
+                                    item.type === 'atrule' &&
+                                    item.name === 'keyframes' &&
+                                    item.params === rule.parent.params
+                            );
+
+                            if (atruleChild) {
+                                const childRules = atruleChild.nodes || [];
+                                const existsSameValue = childRules.some(
+                                    (item) => {
+                                        const isExst =
+                                            item.type === 'rule' &&
+                                            item.selector === rule.selector &&
+                                            item.nodes.some((node) => {
+                                                const isSameValue =
+                                                    node.type === 'decl' &&
+                                                    currentRuleNodeMap[
+                                                        node.prop
+                                                    ].value !== node.value;
+                                                return isSameValue;
+                                            });
+                                        return isExst;
                                     }
+                                );
+                                if (existsSameValue) {
+                                    if (!arbitraryMode) {
+                                        currentThemeKeyframes.push(
+                                            atruleChild.clone()
+                                        );
+                                        const currentMedia =
+                                            rule.parent.parent.clone();
+                                        currentMedia.removeAll();
+                                        currentMedia.append(
+                                            rule.parent.clone()
+                                        );
+                                        extractThemeKeyframesMap[
+                                            allStyleVarFiles[
+                                                opts.startIndex
+                                            ].scopeName
+                                        ] = currentMedia;
+                                        rule.parent.remove();
+                                    }
+                                    const media = themeRule.clone();
+                                    media.removeAll();
+                                    media.append(atruleChild.clone());
+                                    extractThemeKeyframesMap[
+                                        restVarFiles[i].scopeName
+                                    ] = media;
+                                    atruleChild.remove();
                                 }
-                                break;
                             }
-                        } else if (
+
+                            break;
+                        }
+                        const isSameKeyFrame =
                             themeRule.type === 'atrule' &&
                             themeRule.name === 'keyframes' &&
-                            themeRule.params === rule.parent.params
-                        ) {
-                            if (!arbitraryMode) {
-                                currentThemeKeyframes.push(themeRule.clone());
+                            themeRule.params === rule.parent.params;
+                        if (isSameKeyFrame) {
+                            const childRules = themeRule.nodes || [];
+                            const existsSameValue = childRules.some((item) => {
+                                const isExst =
+                                    item.type === 'rule' &&
+                                    item.selector === rule.selector &&
+                                    item.nodes.some((node) => {
+                                        const isSameValue =
+                                            node.type === 'decl' &&
+                                            currentRuleNodeMap[node.prop]
+                                                .value !== node.value;
+                                        return isSameValue;
+                                    });
+                                return isExst;
+                            });
+                            if (existsSameValue) {
+                                if (!arbitraryMode) {
+                                    currentThemeKeyframes.push(
+                                        themeRule.clone()
+                                    );
+                                    extractThemeKeyframesMap[
+                                        allStyleVarFiles[
+                                            opts.startIndex
+                                        ].scopeName
+                                    ] = rule.parent.clone();
+                                    rule.parent.remove();
+                                }
                                 extractThemeKeyframesMap[
-                                    allStyleVarFiles[opts.startIndex].scopeName
-                                ] = rule.parent.clone();
+                                    restVarFiles[i].scopeName
+                                ] = themeRule.clone();
+                                themeRule.remove();
+                                break;
                             }
-                            extractThemeKeyframesMap[
-                                restVarFiles[i].scopeName
-                            ] = themeRule.clone();
-                            themeRule.remove();
-                            break;
                         }
                     }
                 }
@@ -373,7 +402,9 @@ export default (
             }
             if (!arbitraryMode && !isExtracted) {
                 currentThemeKeyframes.forEach((item) => {
-                    rule.parent.parent.insertBefore(rule.parent, item);
+                    if (rule.parent && rule.parent.parent) {
+                        rule.parent.parent.insertBefore(rule.parent, item);
+                    }
                 });
             }
 

@@ -10,13 +10,13 @@ import postcss from 'postcss';
 
 import cssnano from 'cssnano';
 
-import advanced from 'cssnano-preset-advanced';
+import lite from 'cssnano-preset-lite';
 
 import postcssAddScopeName from './postcss-addScopeName';
 
 import { colorValueReg } from './arbitraryMode/utils';
 
-import browerColorMap from './arbitraryMode/colors';
+// import browerColorMap from './arbitraryMode/colors';
 
 import { getCurrentPackRequirePath } from './packPath';
 
@@ -218,23 +218,24 @@ const getScopeProcessResult = (
             }
             const themeRuleValuesArr = Array.from(themeRuleValues);
             if (Object.keys(cssRules).length) {
+                const filecontent = {
+                    cssRules,
+                    ruleValues: themeRuleValuesArr,
+                };
                 fs.writeFileSync(
-                    `${targetRsoleved}/${dirName}/${filename}.js`,
-                    `exports.cssRules = ${JSON.stringify(
-                        cssRules,
-                        null,
-                        4
-                    )};\nexports.ruleValues=${JSON.stringify(
-                        themeRuleValuesArr,
-                        null,
-                        4
-                    )}`
+                    `${targetRsoleved}/${dirName}/${filename}.json`,
+                    JSON.stringify(filecontent, null, 4)
                 );
             }
             preprocessResult.code = postResult.css;
             return preprocessResult;
         });
 };
+
+/**
+ * getScropProcessResult 修正命名 getScopeProcessResult后的兼容
+ */
+const getScropProcessResult = getScopeProcessResult;
 /**
  *
  * @param {String} url
@@ -286,12 +287,11 @@ function getExtractThemeCode() {
         const themeRuleCodes = {};
         let themeRuleValues = [];
         files.forEach((file) => {
-            const {
-                cssRules,
-                ruleValues,
-                // eslint-disable-next-line global-require
-            } = require(`${targetRsoleved}/${dirName}/${file}`);
-
+            const { cssRules, ruleValues } = JSON.parse(
+                fs
+                    .readFileSync(`${targetRsoleved}/${dirName}/${file}`)
+                    .toString()
+            );
             Object.keys(cssRules).forEach((key) => {
                 let scopeCssArr = themeRuleCodes[key] || [];
                 scopeCssArr = scopeCssArr.concat(cssRules[key]);
@@ -306,10 +306,7 @@ function getExtractThemeCode() {
     }
     return { themeRules: {}, themeRuleValues: [] };
 }
-/**
- * getScropProcessResult 修正命名 getScopeProcessResult后的兼容
- */
-const getScropProcessResult = getScopeProcessResult;
+
 /**
  *
  * @param {Object} options
@@ -317,7 +314,7 @@ const getScropProcessResult = getScopeProcessResult;
  * @returns { css: String, themeCss: Object , themeCommonCss: String }
  */
 const extractThemeCss = ({ removeCssScopeName }) => {
-    const { themeRuleCodes } = getExtractThemeCode();
+    const { themeRuleCodes, themeRuleValues } = getExtractThemeCode();
 
     const allPro = Object.keys(themeRuleCodes).map((key) => {
         const codes = (
@@ -329,10 +326,7 @@ const extractThemeCss = ({ removeCssScopeName }) => {
         ).join('');
         return postcss([
             cssnano({
-                preset: advanced({
-                    reduceIdents: { keyframes: false },
-                    zindex: false,
-                }),
+                preset: lite({}),
             }),
         ])
             .process(codes)
@@ -345,7 +339,7 @@ const extractThemeCss = ({ removeCssScopeName }) => {
         res.forEach((item) => {
             themeCss[item.key] = item.css;
         });
-        return { themeCss };
+        return { themeCss, themeRuleValues };
     });
 };
 
@@ -400,25 +394,20 @@ function createArbitraryModeVarColors(filecontent) {
         const hsla = (filecontent.match(colorValueReg.hsla) || []).map(
             (color) => color.replace(/\s+/g, '').replace(/,0(?=,)/g, ',0%')
         );
-        const browerColorReg = new RegExp(
-            `(?<=:\\s*)(${Object.keys(browerColorMap).join('|')})(?=\\s*)`,
-            'ig'
-        );
-        const browerColors = filecontent.match(browerColorReg) || [];
+        // const browerColorReg = new RegExp(
+        //     `(?<=:\\s*)(${Object.keys(browerColorMap).join('|')})(?=\\s*)`,
+        //     'ig'
+        // );
+        // const browerColors = filecontent.match(browerColorReg) || [];
         const colors = Array.from(
             new Set(
-                browerColors
-                    .concat(hex)
-                    .concat(rgb)
-                    .concat(rgba)
-                    .concat(hsl)
-                    .concat(hsla)
+                [].concat(hex).concat(rgb).concat(rgba).concat(hsl).concat(hsla)
             )
         );
         const targetRsoleved = getCurrentPackRequirePath();
         fs.writeFileSync(
-            `${targetRsoleved}/baseVarColors.js`,
-            `exports.baseVarColors=${JSON.stringify(colors)};`
+            `${targetRsoleved}/baseVarColors.json`,
+            JSON.stringify({ baseVarColors: colors })
         );
     }
 }
