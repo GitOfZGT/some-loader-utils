@@ -80,21 +80,23 @@ function getResultColorReplaceMap({
     defaultPrimaryColor,
     includeStyleWithColors,
 }) {
-    const defaultColor = Color(defaultPrimaryColor).hsv();
-    if (
-        !varsColorValues.some((varStr) => {
-            const varColor = Color(varStr).hsv();
-            return (
-                defaultColor.color[0] === varColor.color[0] &&
-                defaultColor.color[1] === varColor.color[1] &&
-                defaultColor.color[2] === varColor.color[2] &&
-                defaultColor.valpha === varColor.valpha
+    if (defaultPrimaryColor) {
+        const defaultColor = Color(defaultPrimaryColor).hsv();
+        if (
+            !varsColorValues.some((varStr) => {
+                const varColor = Color(varStr).hsv();
+                return (
+                    defaultColor.color[0] === varColor.color[0] &&
+                    defaultColor.color[1] === varColor.color[1] &&
+                    defaultColor.color[2] === varColor.color[2] &&
+                    defaultColor.valpha === varColor.valpha
+                );
+            })
+        ) {
+            console.warn(
+                `warning: defaultPrimaryColor:${defaultPrimaryColor} can not found in multipleScopeVars[].path`
             );
-        })
-    ) {
-        console.warn(
-            `warning: defaultPrimaryColor:${defaultPrimaryColor} can not found in multipleScopeVars[].path`
-        );
+        }
     }
     const sourceColorMap = {};
     // const mixWeightsMap = {};
@@ -122,7 +124,7 @@ function getResultColorReplaceMap({
                 break;
             }
         }
-        if (!finded) {
+        if (!finded && defaultPrimaryColor) {
             const varColor = Color(defaultPrimaryColor).hsv();
             sourceColorMap[colorString] = {
                 percentGias: getHsvPercentGias(varColor, resultColor),

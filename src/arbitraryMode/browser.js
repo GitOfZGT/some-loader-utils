@@ -32,7 +32,7 @@ function getSetNewThemeMethod(options) {
      * @param {object} [options.targetValueReplacer] 可用于非颜色值的替换，如"padding:10px;" 中的 "10px"，（如果是颜色值，则是精确替换颜色）
      */
     function getReplaceStyleValues({
-        defaultPrimaryColor = '',
+        // defaultPrimaryColor = '',
         primaryColor = '',
         gradientReplacer = {},
         targetValueReplacer = {},
@@ -50,10 +50,7 @@ function getSetNewThemeMethod(options) {
                     const newColor = getTargetColor(
                         Color(
                             gradientReplacer[item.varColorString] ||
-                                (Color(defaultPrimaryColor).hsv().array()[0] ===
-                                Color(item.varColorString).hsv().array()[0]
-                                    ? primaryColor
-                                    : item.varColorString)
+                                primaryColor
                         ),
                         item.percentGias
                     );

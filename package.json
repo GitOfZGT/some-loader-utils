@@ -1,6 +1,6 @@
 {
     "name": "@zougt/some-loader-utils",
-    "version": "1.4.0-beta.2",
+    "version": "1.4.0-beta.3",
     "description": "implementation for less-loader or sass-loader. Compiles Less or sass to CSS.",
     "license": "MIT",
     "repository": "GitOfZGT/some-loader-utils",
