@@ -2,8 +2,7 @@ import {
     getScopeProcessResult,
     getAllStyleVarFiles,
     getVarsContent,
-    removeThemeFiles,
-    createArbitraryModeVarColors
+    createArbitraryModeVarColors,
 } from './utils';
 /**
  *
@@ -24,9 +23,6 @@ export function getLess(opt = {}) {
             );
         }
     }
-
-    removeThemeFiles();
-
     const { render } = less;
     // eslint-disable-next-line func-names
     less.render = function (input, options = {}, callback) {
@@ -52,10 +48,13 @@ export function getLess(opt = {}) {
         const rePromise = Promise.all(
             allStyleVarFiles.map((file) => {
                 const varscontent = getVarsContent(file.path, packname);
-                if(opt.arbitraryMode){
-                    createArbitraryModeVarColors(varscontent)
+                if (opt.arbitraryMode) {
+                    createArbitraryModeVarColors(varscontent);
                 }
-                return preProcessor(`${input}\n${varscontent}`);
+             
+                return preProcessor(
+                    `${input}\n${varscontent}\n${file.varsContent || ''}`
+                );
             })
         )
             .then((prs) =>
@@ -65,6 +64,7 @@ export function getLess(opt = {}) {
                     }),
                     allStyleVarFiles,
                     renderOptions.filename,
+                    opt.includeStyleWithColors,
                     opt.arbitraryMode
                 )
             )

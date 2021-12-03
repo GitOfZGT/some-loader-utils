@@ -1,10 +1,10 @@
 import postcss from 'postcss';
 
-import colorParse from 'parse-color';
-
 import fs from 'fs-extra';
 
 import { getCurrentPackRequirePath } from './packPath';
+
+import { isSameColor, removeSpaceInColor } from './arbitraryMode/utils';
 
 export default (
     opts = {
@@ -12,6 +12,7 @@ export default (
         allCssCodes: [],
         startIndex: 0,
         arbitraryMode: false,
+        includeStyleWithColors: [],
     },
     themeRuleValues = [],
     themeRuleMap = {}
@@ -71,12 +72,20 @@ export default (
                     if (!themeRuleNodeMap[prop]) {
                         return;
                     }
-                    // 比对属性值不相等的就进行分离
+                    // 比对属性值不相等的，或者存在 includeStyleWithColors 中对应的颜值，就进行分离
                     if (
                         currentRuleNodeMap[prop].value !==
-                        themeRuleNodeMap[prop].value
+                            themeRuleNodeMap[prop].value ||
+                        (opts.includeStyleWithColors || []).some((item) =>
+                            isSameColor(
+                                item.color,
+                                themeRuleNodeMap[prop].value
+                            )
+                        )
                     ) {
-                        themeRuleValues.add(themeRuleNodeMap[prop].value);
+                        themeRuleValues.add(
+                            removeSpaceInColor(themeRuleNodeMap[prop].value)
+                        );
 
                         childNodes.push(themeRuleNodeMap[prop]);
                         currentThemeProps[prop] = currentRuleNodeMap[prop];
@@ -159,23 +168,30 @@ export default (
 
                             if (atruleChild) {
                                 const childRules = atruleChild.nodes || [];
-                                const existsSameValue = childRules.some(
+                                const existsDiffValue = childRules.some(
                                     (item) => {
                                         const isExst =
                                             item.type === 'rule' &&
                                             item.selector === rule.selector &&
                                             item.nodes.some((node) => {
-                                                const isSameValue =
+                                                const isDiffValue =
                                                     node.type === 'decl' &&
                                                     currentRuleNodeMap[
                                                         node.prop
                                                     ].value !== node.value;
-                                                return isSameValue;
+                                                if (isDiffValue) {
+                                                    themeRuleValues.add(
+                                                        removeSpaceInColor(
+                                                            node.value
+                                                        )
+                                                    );
+                                                }
+                                                return isDiffValue;
                                             });
                                         return isExst;
                                     }
                                 );
-                                if (existsSameValue) {
+                                if (existsDiffValue) {
                                     if (!arbitraryMode) {
                                         currentThemeKeyframes.push(
                                             atruleChild.clone()
@@ -211,20 +227,26 @@ export default (
                             themeRule.params === rule.parent.params;
                         if (isSameKeyFrame) {
                             const childRules = themeRule.nodes || [];
-                            const existsSameValue = childRules.some((item) => {
+                            const existsDiffValue = childRules.some((item) => {
                                 const isExst =
                                     item.type === 'rule' &&
                                     item.selector === rule.selector &&
                                     item.nodes.some((node) => {
-                                        const isSameValue =
+                                        const isDiffValue =
                                             node.type === 'decl' &&
                                             currentRuleNodeMap[node.prop]
                                                 .value !== node.value;
-                                        return isSameValue;
+
+                                        if (isDiffValue) {
+                                            themeRuleValues.add(
+                                                removeSpaceInColor(node.value)
+                                            );
+                                        }
+                                        return isDiffValue;
                                     });
                                 return isExst;
                             });
-                            if (existsSameValue) {
+                            if (existsDiffValue) {
                                 if (!arbitraryMode) {
                                     currentThemeKeyframes.push(
                                         themeRule.clone()
@@ -351,33 +373,14 @@ export default (
                                     newRule.append(decl);
                                     const currDecl = rule.nodes.find((node) => {
                                         if (node.prop === decl.prop) {
-                                            if (node.value === decl.value) {
-                                                return true;
-                                            }
-
-                                            let colorHex = null;
-                                            let isQueit = false;
-
-                                            try {
-                                                colorHex = colorParse(
-                                                    node.value
-                                                );
-
-                                                if (
-                                                    colorHex &&
-                                                    colorHex.hex ===
-                                                        colorParse(decl.value)
-                                                            .hex
-                                                ) {
-                                                    isQueit = true;
-                                                }
-                                            } catch (e) {
-                                                console.warn(e);
-                                            }
-
-                                            return isQueit;
+                                            return (
+                                                node.value === decl.value ||
+                                                isSameColor(
+                                                    node.value,
+                                                    decl.value
+                                                )
+                                            );
                                         }
-
                                         return false;
                                     });
 

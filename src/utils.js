@@ -21,12 +21,19 @@ import { colorValueReg } from './arbitraryMode/utils';
 import { getCurrentPackRequirePath } from './packPath';
 
 const getAllStyleVarFiles = (loaderContext, options) => {
-    let styleVarFiles = options.multipleScopeVars;
+    const varsSet = {};
+    (options.multipleScopeVars || []).forEach((item) => {
+        varsSet[item.scopeName] = item;
+    });
+    const styleVarFiles = Object.keys(varsSet).reduce(
+        (tol, key) => [...tol, varsSet[key]],
+        []
+    );
     let allStyleVarFiles = [{ scopeName: '', path: '' }];
     if (Array.isArray(styleVarFiles) && styleVarFiles.length) {
-        if (options.arbitraryMode) {
-            styleVarFiles = styleVarFiles.slice(0, 1);
-        }
+        // if (options.arbitraryMode) {
+        //     styleVarFiles = styleVarFiles.slice(0, 1);
+        // }
         if (styleVarFiles.length === 1) {
             allStyleVarFiles = styleVarFiles.map((item) => {
                 if (Array.isArray(item.path)) {
@@ -45,13 +52,14 @@ const getAllStyleVarFiles = (loaderContext, options) => {
                         return { scopeName: '', path: '' };
                     }
                 } else if (
-                    !item.path ||
-                    typeof item.path !== 'string' ||
-                    !fs.existsSync(item.path)
+                    (!item.path ||
+                        typeof item.path !== 'string' ||
+                        !fs.existsSync(item.path)) &&
+                    typeof item.varsContent !== 'string'
                 ) {
                     loaderContext.emitError(
                         new Error(
-                            `Not found path: ${item.path} in multipleScopeVars`
+                            `Not found path or varsContent: ${item.path}  in multipleScopeVars`
                         )
                     );
                     return { scopeName: '', path: '' };
@@ -66,7 +74,12 @@ const getAllStyleVarFiles = (loaderContext, options) => {
             });
             return (
                 options.arbitraryMode ? [{ scopeName: '', path: '' }] : []
-            ).concat(allStyleVarFiles.filter((item) => !!item.path));
+            ).concat(
+                allStyleVarFiles.filter(
+                    (item) =>
+                        !!item.path || typeof item.varsContent === 'string'
+                )
+            );
         }
         allStyleVarFiles = styleVarFiles.filter((item) => {
             if (!item.scopeName) {
@@ -76,26 +89,29 @@ const getAllStyleVarFiles = (loaderContext, options) => {
                 return false;
             }
             if (Array.isArray(item.path)) {
-                return item.path.every((pathstr) => {
-                    const exists = pathstr && fs.existsSync(pathstr);
-                    if (!exists) {
-                        loaderContext.emitError(
-                            new Error(
-                                `Not found path: ${pathstr} in multipleScopeVars`
-                            )
-                        );
-                    }
-                    return exists;
-                });
+                return (
+                    item.path.every((pathstr) => {
+                        const exists = pathstr && fs.existsSync(pathstr);
+                        if (!exists) {
+                            loaderContext.emitError(
+                                new Error(
+                                    `Not found path : ${pathstr} in multipleScopeVars`
+                                )
+                            );
+                        }
+                        return exists;
+                    }) || typeof item.varsContent === 'string'
+                );
             }
             if (
-                !item.path ||
-                typeof item.path !== 'string' ||
-                !fs.existsSync(item.path)
+                (!item.path ||
+                    typeof item.path !== 'string' ||
+                    !fs.existsSync(item.path)) &&
+                typeof item.varsContent !== 'string'
             ) {
                 loaderContext.emitError(
                     new Error(
-                        `Not found path: ${item.path} in multipleScopeVars`
+                        `Not found path or varsContent: ${item.path} in multipleScopeVars`
                     )
                 );
                 return false;
@@ -103,7 +119,9 @@ const getAllStyleVarFiles = (loaderContext, options) => {
             return true;
         });
     }
-    return allStyleVarFiles;
+    return options.arbitraryMode
+        ? allStyleVarFiles.slice(0, 2)
+        : allStyleVarFiles;
 };
 
 // const cssFragReg = /[^{}/\\]+{[^{}]*?}/g;
@@ -149,6 +167,7 @@ const getScopeProcessResult = (
     cssResults = [],
     allStyleVarFiles = [],
     resourcePath,
+    includeStyleWithColors,
     arbitraryMode
 ) => {
     const preprocessResult = { deps: [], code: '', errors: [] };
@@ -189,6 +208,7 @@ const getScopeProcessResult = (
                 // 除去allCssCodes中的第几个
                 startIndex,
                 arbitraryMode,
+                includeStyleWithColors,
             },
             themeRuleValues,
             themeRuleMap
@@ -221,6 +241,7 @@ const getScopeProcessResult = (
                 const filecontent = {
                     cssRules,
                     ruleValues: themeRuleValuesArr,
+                    resourcePath,
                 };
                 fs.writeFileSync(
                     `${targetRsoleved}/${dirName}/${filename}.json`,
@@ -283,7 +304,7 @@ function getExtractThemeCode() {
     const targetRsoleved = getCurrentPackRequirePath();
     const dirName = 'extractTheme';
     if (fs.existsSync(`${targetRsoleved}/${dirName}`)) {
-        const files = fs.readdirSync(`${targetRsoleved}/${dirName}`);
+        const files = fs.readdirSync(`${targetRsoleved}/${dirName}`) || [];
         const themeRuleCodes = {};
         let themeRuleValues = [];
         files.forEach((file) => {
@@ -316,7 +337,7 @@ function getExtractThemeCode() {
 const extractThemeCss = ({ removeCssScopeName }) => {
     const { themeRuleCodes, themeRuleValues } = getExtractThemeCode();
 
-    const allPro = Object.keys(themeRuleCodes).map((key) => {
+    const allPro = Object.keys(themeRuleCodes || {}).map((key) => {
         const codes = (
             removeCssScopeName
                 ? themeRuleCodes[key].map((frag) =>

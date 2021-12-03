@@ -2,8 +2,7 @@ import {
     getScopeProcessResult,
     getAllStyleVarFiles,
     getVarsContent,
-    removeThemeFiles,
-    createArbitraryModeVarColors
+    createArbitraryModeVarColors,
     // eslint-disable-next-line import/no-extraneous-dependencies
 } from './utils';
 
@@ -27,8 +26,6 @@ export function getSass(opt = {}) {
             );
         }
     }
-
-    removeThemeFiles();
 
     const { render } = sass;
 
@@ -70,10 +67,14 @@ export function getSass(opt = {}) {
         const rePromise = Promise.all(
             allStyleVarFiles.map((file) => {
                 const varscontent = getVarsContent(file.path, packname);
-                if(opt.arbitraryMode){
-                    createArbitraryModeVarColors(varscontent)
+                if (opt.arbitraryMode) {
+                    createArbitraryModeVarColors(varscontent);
                 }
-                return preProcessor(`${varscontent}\n${renderOptions.data}`);
+                return preProcessor(
+                    `${file.varsContent || ''}${varscontent}\n${
+                        renderOptions.data
+                    }`
+                );
             })
         )
             .then((prs) => {
@@ -90,6 +91,7 @@ export function getSass(opt = {}) {
                     }),
                     allStyleVarFiles,
                     renderOptions.file,
+                    opt.includeStyleWithColors,
                     opt.arbitraryMode
                 );
             })
