@@ -9,6 +9,17 @@
 
 ![主题切换效果](https://img-blog.csdnimg.cn/20210518124127696.gif)
 
+
+**2021-12-03:** 
+
+v1.4.0+ 支持 arbitraryMode 来启用动态主题的实现
+
+特点：使用成本低、无关框架、不是使用Css3 vars
+
+![](https://img-blog.csdnimg.cn/be6e9af4ce0c493f8c8c9caf4a3b34c3.gif)
+
+vite的插件已发布测试版v1.4.0-beta.3，可查看这个demo：[vite-dynamictheme-antd-vue-demo](https://github.com/GitOfZGT/vite-dynamictheme-antd-vue-demo)，webpack的需要依赖插件，还未完成。
+
 ## 安装与使用
 
 ```bash
@@ -336,14 +347,6 @@ module.exports = {
 
 > 以上是基于 webpack 的多主题的编译方案实现，如需 vite 版本的请看 vite 插件[@zougt/vite-plugin-theme-preprocessor](https://github.com/GitOfZGT/vite-plugin-theme-preprocessor)
 
-# 依赖方法
-
-## getAllStyleVarFiles
-
-Type `Function`
-
-用于处理`multipleScopeVars`属性
-
 ### multipleScopeVars
 
 必需的
@@ -450,80 +453,3 @@ const multipleScopeVars = [
 使用了 includeStyles 的效果图
 
 ![includeStyles](https://user-images.githubusercontent.com/21262000/133917724-4d64f4e5-af9b-4dd6-8481-b10b20f3204f.png)
-
-## getVarsContent
-
-Type `Function`
-
-用于获取 multipleScopeVars[].path 文件的内容
-
-```js
-const lessVarscontent = getVarsContent(allStyleVarFiles[0].path, 'less');
-const sassVarscontent = getVarsContent(allStyleVarFiles[0].path, 'sass');
-```
-
-## getScopeProcessResult
-
-Type `Function`
-
-把多个 css 内容按 multipleScopeVars 对应顺序合并，并去重
-
-```js
-const result = getScopeProcessResult(
-    [
-        {
-            map: sourceMap || null,
-            code: `
-        .un-btn {
-            position: relative;
-            background-color: #0081ff;
-        }
-        .un-btn .anticon {
-            line-height: 1;
-        }`,
-            deps: ['E:\\sub\\panel1.less', 'E:\\sub\\panel2.less'],
-        },
-        {
-            map: sourceMap || null,
-            code: `
-        .un-btn {
-            position: relative;
-            background-color: #9c26b0;
-        }
-        .un-btn .anticon {
-            line-height: 1;
-        }`,
-            deps: ['E:\\sub\\panel1.less', 'E:\\sub\\panel2.less'],
-        },
-    ],
-    [
-        { scopeName: 'theme-default', path: 'E:\\sub\\default-vars.less' },
-        { scopeName: 'theme-mauve', path: 'E:\\sub\\mauve-vars.less' },
-    ],
-    'E:\\sub\\style.less'
-);
-
-//result
-//  {
-//   code: `
-//         .un-btn {
-//             position: relative;
-//         }
-//         .theme-default .un-btn{
-//             background-color: #0081ff;
-//         }
-//         .theme-mauve .un-btn{
-//             background-color: #9c26b0;
-//         }
-//         .un-btn .anticon {
-//             line-height: 1;
-//         }`,
-//   deps: [
-//     "E:\\sub\\default-vars.less",
-//     "E:\\sub\\mauve-vars.less",
-//     "E:\\sub\\panel1.less",
-//     "E:\\sub\\panel2.less",
-//   ],
-//   map: sourceMap || null,
-// };
-```
