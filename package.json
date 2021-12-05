@@ -1,6 +1,9 @@
 {
+    "bin": {
+        "z-theme": "dist/bin/index.js"
+    },
     "name": "@zougt/some-loader-utils",
-    "version": "1.4.0-beta.3",
+    "version": "1.4.0-beta.5",
     "description": "implementation for less-loader or sass-loader. Compiles Less or sass to CSS.",
     "license": "MIT",
     "repository": "GitOfZGT/some-loader-utils",
@@ -38,6 +41,8 @@
         "sass": "^1.32.8"
     },
     "dependencies": {
+        "cac": "^6.7.12",
+        "chalk": "^5.0.0",
         "color": "^4.0.1",
         "cssnano": "^5.0.11",
         "cssnano-preset-lite": "^2.0.1",

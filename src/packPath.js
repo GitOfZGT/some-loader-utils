@@ -5,7 +5,7 @@ export function getCurrentPackRequirePath() {
         .resolve(pack.name, {
             paths: [process.cwd()],
         })
-        .replace(/[\\/]dist[\\/]index\.js$/, '');
+        .replace(/[\\/]dist[\\/]index\.js$/, '').replace(/\\/g,'/');
     return targetRsoleved;
 }
 

@@ -197,6 +197,19 @@ function createSetCustomThemeFile({
     const browerCodes = fs
         .readFileSync(path.join(__dirname, './browser.js'))
         .toString();
+
+    fs.outputFile(
+        `${targetRsoleved}/customThemeOptions.json`,
+
+        JSON.stringify({
+            Color:'see https://github.com/Qix-/color',
+            primaryColor:defaultPrimaryColor,
+            gradientReplacer,
+            targetValueReplacer,
+        }),
+        () => {}
+    );
+
     const fileContent = `
 ${
     importUtils
