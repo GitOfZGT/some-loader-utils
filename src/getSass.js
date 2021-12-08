@@ -1,3 +1,5 @@
+import { v5 as uuidv5 } from 'uuid';
+
 import {
     getScopeProcessResult,
     getAllStyleVarFiles,
@@ -90,7 +92,13 @@ export function getSass(opt = {}) {
                         };
                     }),
                     allStyleVarFiles,
-                    renderOptions.file,
+                    // sass-loader v8.x 没有传入renderOptions.file, 用uuid生成一个，防止报错
+                    renderOptions.file ||
+                        (renderOptions.data &&
+                            uuidv5(
+                                renderOptions.data,
+                                '4725327a-3250-4226-86cf-ae5ce775795b'
+                            )),
                     opt.includeStyleWithColors,
                     opt.arbitraryMode
                 );
