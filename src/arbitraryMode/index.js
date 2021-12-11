@@ -79,33 +79,51 @@ function getResultColorReplaceMap({
     varsColorValues,
     defaultPrimaryColor,
     includeStyleWithColors,
+    hueDiffControls,
 }) {
-    if (defaultPrimaryColor) {
-        const defaultColor = Color(defaultPrimaryColor).hsv();
-        if (
-            !varsColorValues.some((varStr) => {
-                const varColor = Color(varStr).hsv();
-                return (
-                    defaultColor.color[0] === varColor.color[0] &&
-                    defaultColor.color[1] === varColor.color[1] &&
-                    defaultColor.color[2] === varColor.color[2] &&
-                    defaultColor.valpha === varColor.valpha
-                );
-            })
-        ) {
-            console.warn(
-                `warning: defaultPrimaryColor:${defaultPrimaryColor} can not found in multipleScopeVars[].path`
-            );
-        }
+    // if (defaultPrimaryColor) {
+
+    // const defaultColor = Color(defaultPrimaryColor).hsv();
+    // if (
+    //     !varsColorValues.some((varStr) => {
+    //         const varColor = Color(varStr).hsv();
+    //         return (
+    //             defaultColor.color[0] === varColor.color[0] &&
+    //             defaultColor.color[1] === varColor.color[1] &&
+    //             defaultColor.color[2] === varColor.color[2] &&
+    //             defaultColor.valpha === varColor.valpha
+    //         );
+    //     })
+    // ) {
+    //     console.warn(
+    //         `warning: defaultPrimaryColor:${defaultPrimaryColor} can not found in multipleScopeVars[].path`
+    //     );
+    // }
+    // }
+    let primaryVarColor = null;
+    try {
+        primaryVarColor = Color(defaultPrimaryColor).hsv();
+    } catch (e) {
+        throw Error(
+            `error:defaultPrimaryColor: ${defaultPrimaryColor}  not a color value`
+        );
     }
+    const hueDiffControler = { low: 0, high: 0, ...(hueDiffControls || {}) };
     const sourceColorMap = {};
-    // const mixWeightsMap = {};
+
     cssColors.forEach((colorString) => {
-        // 在 includeStyleWithColors 存在的颜色值就不会根据主色转换
+        // 在 includeStyleWithColors 存在的颜色值就不会根据主色转换，除非启用了includeStyleWithColors[].inGradient:true
         if (
             includeStyleWithColors
                 .filter((item) => !item.inGradient)
-                .some((item) => isSameColor(item.color, colorString))
+                .some((item) => {
+                    if (Array.isArray(item.color)) {
+                        return item.color.some((co) =>
+                            isSameColor(co, colorString)
+                        );
+                    }
+                    return isSameColor(item.color, colorString);
+                })
         ) {
             return;
         }
@@ -114,30 +132,36 @@ function getResultColorReplaceMap({
         for (let index = 0; index < varsColorValues.length; index++) {
             const varStr = varsColorValues[index];
             const varColor = Color(varStr).hsv();
-
-            if (varColor.color[0] === resultColor.color[0]) {
+            const varHue = Math.floor(varColor.color[0]);
+            const hues = [varHue];
+            for (let i = 0; i < hueDiffControler.low; i++) {
+                const h = varHue - (i + 1);
+                hues.push(h < 0 ? 0 : h);
+            }
+            for (let i = 0; i < hueDiffControler.high; i++) {
+                const h = varHue + (i + 1);
+                hues.push(h > 360 ? 360 : h);
+            }
+            const reHue = Math.floor(resultColor.color[0]);
+            if (hues.some((h) => h === reHue)) {
                 sourceColorMap[colorString] = {
-                    percentGias: getHsvPercentGias(varColor, resultColor),
-                    varColorString: varStr,
+                    percentGias: getHsvPercentGias(
+                        primaryVarColor,
+                        resultColor
+                    ),
+                    varColorString: defaultPrimaryColor,
+                    sourcePercentGias: getHsvPercentGias(varColor, resultColor),
+                    sourceVarColorString: varStr,
                 };
                 finded = true;
                 break;
             }
         }
         if (!finded && defaultPrimaryColor) {
-            const varColor = Color(defaultPrimaryColor).hsv();
             sourceColorMap[colorString] = {
-                percentGias: getHsvPercentGias(varColor, resultColor),
+                percentGias: getHsvPercentGias(primaryVarColor, resultColor),
                 varColorString: defaultPrimaryColor,
             };
-            // if (varColor.color[0] > resultColor.color[0]) {
-            //     sourceColorMap[colorString].percentGias = getHsvPercentGias(
-            //         varColor,
-            //         resultColor
-            //     );
-            // } else {
-            //     mixWeightsMap[colorString] = '50%';
-            // }
         }
     });
     return sourceColorMap;
@@ -162,6 +186,7 @@ function createSetCustomThemeFile({
     appendedContent,
     preAppendedContent,
     importUtils,
+    hueDiffControls
 }) {
     if (typeof defaultPrimaryColor !== 'string' || !defaultPrimaryColor) {
         throw Error('defaultPrimaryColor can not found.');
@@ -181,6 +206,7 @@ function createSetCustomThemeFile({
         varsColorValues: baseVarColorsJson.baseVarColors || [],
         defaultPrimaryColor,
         includeStyleWithColors,
+        hueDiffControls
     });
 
     const targetValueReplacer = Object.keys(sourceColorMap)
@@ -190,7 +216,7 @@ function createSetCustomThemeFile({
             return { ...tol, [curr]: curr };
         }, {});
     const gradientReplacer = Object.keys(sourceColorMap)
-        .map((key) => sourceColorMap[key].varColorString)
+        .map((key) => sourceColorMap[key].sourceVarColorString)
         .reduce((tol, curr) => {
             return { ...tol, [curr]: curr };
         }, {});
@@ -202,8 +228,8 @@ function createSetCustomThemeFile({
         `${targetRsoleved}/customThemeOptions.json`,
 
         JSON.stringify({
-            Color:'see https://github.com/Qix-/color',
-            primaryColor:defaultPrimaryColor,
+            Color: 'see https://github.com/Qix-/color',
+            primaryColor: defaultPrimaryColor,
             gradientReplacer,
             targetValueReplacer,
         }),

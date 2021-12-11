@@ -3,6 +3,7 @@ import {
     getAllStyleVarFiles,
     getVarsContent,
     createArbitraryModeVarColors,
+    getPluginParams,
 } from './utils';
 /**
  *
@@ -27,7 +28,7 @@ export function getLess(opt = {}) {
     // eslint-disable-next-line func-names
     less.render = function (input, options = {}, callback) {
         const renderOptions = { ...options };
-
+        const defaultPluginOpt = getPluginParams(opt);
         const multipleScopeVars =
             typeof opt.getMultipleScopeVars === 'function'
                 ? opt.getMultipleScopeVars(renderOptions)
@@ -41,17 +42,17 @@ export function getLess(opt = {}) {
                     throw new Error(msg);
                 },
             },
-            { multipleScopeVars, arbitraryMode: opt.arbitraryMode }
+            { multipleScopeVars, arbitraryMode: defaultPluginOpt.arbitraryMode }
         );
         const preProcessor = (code) => render.call(less, code, renderOptions);
         // 按allStyleVarFiles的个数对当前文件编译多次得到多个结果
         const rePromise = Promise.all(
             allStyleVarFiles.map((file) => {
                 const varscontent = getVarsContent(file.path, packname);
-                if (opt.arbitraryMode) {
+                if (defaultPluginOpt.arbitraryMode) {
                     createArbitraryModeVarColors(varscontent);
                 }
-             
+
                 return preProcessor(
                     `${input}\n${varscontent}\n${file.varsContent || ''}`
                 );
@@ -64,8 +65,9 @@ export function getLess(opt = {}) {
                     }),
                     allStyleVarFiles,
                     renderOptions.filename,
-                    opt.includeStyleWithColors,
-                    opt.arbitraryMode
+                    defaultPluginOpt.includeStyleWithColors,
+                    defaultPluginOpt.arbitraryMode,
+                    defaultPluginOpt.extract
                 )
             )
             .then((result) => {

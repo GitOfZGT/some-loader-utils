@@ -1,9 +1,5 @@
 import postcss from 'postcss';
 
-import fs from 'fs-extra';
-
-import { getCurrentPackRequirePath } from './packPath';
-
 import { isSameColor, removeSpaceInColor } from './arbitraryMode/utils';
 
 export default (
@@ -13,18 +9,12 @@ export default (
         startIndex: 0,
         arbitraryMode: false,
         includeStyleWithColors: [],
+        extract: false,
     },
     themeRuleValues = [],
     themeRuleMap = {}
 ) => {
-    const targetRsoleved = getCurrentPackRequirePath();
-    // 是否使用了插件来抽取主题css到独立的文件
-    let isExtracted = false;
-    if (fs.existsSync(`${targetRsoleved}/pulignParams.js`)) {
-        const param = require(`${targetRsoleved}/pulignParams.js`);
-        isExtracted = param.extract;
-    }
-    const { allStyleVarFiles, arbitraryMode } = opts;
+    const { allStyleVarFiles, arbitraryMode, extract } = opts;
     function addScopeName(selector, scopeName) {
         if (/^(\.[^:]+)?:root/i.test(selector)) {
             return `.${scopeName}${selector}`;
@@ -76,12 +66,29 @@ export default (
                     if (
                         currentRuleNodeMap[prop].value !==
                             themeRuleNodeMap[prop].value ||
-                        (opts.includeStyleWithColors || []).some((item) =>
-                            isSameColor(
-                                item.color,
-                                themeRuleNodeMap[prop].value
-                            )
-                        )
+                        (opts.includeStyleWithColors || []).some((item) => {
+                            const isExcludeProperty =
+                                Array.isArray(item.excludeCssProps) &&
+                                item.excludeCssProps.includes(prop);
+                            if (Array.isArray(item.color)) {
+                                return (
+                                    !isExcludeProperty &&
+                                    item.color.some((co) =>
+                                        isSameColor(
+                                            co,
+                                            themeRuleNodeMap[prop].value
+                                        )
+                                    )
+                                );
+                            }
+                            return (
+                                !isExcludeProperty &&
+                                isSameColor(
+                                    item.color,
+                                    themeRuleNodeMap[prop].value
+                                )
+                            );
+                        })
                     ) {
                         themeRuleValues.add(
                             removeSpaceInColor(themeRuleNodeMap[prop].value)
@@ -314,7 +321,7 @@ export default (
                             item.selectors = item.selectors.map((selector) =>
                                 addScopeName(selector, scopeItems[i].scopeName)
                             );
-                            if (!isExtracted) {
+                            if (!extract) {
                                 root.insertBefore(rule, item);
                             }
                         }
@@ -392,7 +399,7 @@ export default (
                                     themeRuleMap[item.scopeName] || new Set();
                                 scopeSet.add(newRule.toString());
                                 themeRuleMap[item.scopeName] = scopeSet;
-                                if (!isExtracted) {
+                                if (!extract) {
                                     root.insertBefore(rule, newRule);
                                 }
                             }
@@ -403,7 +410,7 @@ export default (
                     rule.remove();
                 }
             }
-            if (!arbitraryMode && !isExtracted) {
+            if (!arbitraryMode && !extract) {
                 currentThemeKeyframes.forEach((item) => {
                     if (rule.parent && rule.parent.parent) {
                         rule.parent.parent.insertBefore(rule.parent, item);

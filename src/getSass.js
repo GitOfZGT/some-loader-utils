@@ -5,6 +5,7 @@ import {
     getAllStyleVarFiles,
     getVarsContent,
     createArbitraryModeVarColors,
+    getPluginParams,
     // eslint-disable-next-line import/no-extraneous-dependencies
 } from './utils';
 
@@ -34,7 +35,7 @@ export function getSass(opt = {}) {
     // eslint-disable-next-line func-names
     sass.render = function (options = {}, callback) {
         const renderOptions = { ...options };
-
+        const defaultPluginOpt = getPluginParams(opt);
         const multipleScopeVars =
             typeof opt.getMultipleScopeVars === 'function'
                 ? opt.getMultipleScopeVars(renderOptions)
@@ -48,7 +49,7 @@ export function getSass(opt = {}) {
                     throw new Error(msg);
                 },
             },
-            { multipleScopeVars, arbitraryMode: opt.arbitraryMode }
+            { multipleScopeVars, arbitraryMode: defaultPluginOpt.arbitraryMode }
         );
         const preProcessor = (code) =>
             new Promise((resolve, reject) => {
@@ -69,7 +70,7 @@ export function getSass(opt = {}) {
         const rePromise = Promise.all(
             allStyleVarFiles.map((file) => {
                 const varscontent = getVarsContent(file.path, packname);
-                if (opt.arbitraryMode) {
+                if (defaultPluginOpt.arbitraryMode) {
                     createArbitraryModeVarColors(varscontent);
                 }
                 return preProcessor(
@@ -99,8 +100,9 @@ export function getSass(opt = {}) {
                                 renderOptions.data,
                                 '4725327a-3250-4226-86cf-ae5ce775795b'
                             )),
-                    opt.includeStyleWithColors,
-                    opt.arbitraryMode
+                    defaultPluginOpt.includeStyleWithColors,
+                    defaultPluginOpt.arbitraryMode,
+                    defaultPluginOpt.extract
                 );
             })
 

@@ -31,9 +31,6 @@ const getAllStyleVarFiles = (loaderContext, options) => {
     );
     let allStyleVarFiles = [{ scopeName: '', path: '' }];
     if (Array.isArray(styleVarFiles) && styleVarFiles.length) {
-        // if (options.arbitraryMode) {
-        //     styleVarFiles = styleVarFiles.slice(0, 1);
-        // }
         if (styleVarFiles.length === 1) {
             allStyleVarFiles = styleVarFiles.map((item) => {
                 if (Array.isArray(item.path)) {
@@ -168,7 +165,8 @@ const getScopeProcessResult = (
     allStyleVarFiles = [],
     resourcePath,
     includeStyleWithColors,
-    arbitraryMode
+    arbitraryMode,
+    extract
 ) => {
     const preprocessResult = { deps: [], code: '', errors: [] };
     if (cssResults.length === 1) {
@@ -209,6 +207,7 @@ const getScopeProcessResult = (
                 startIndex,
                 arbitraryMode,
                 includeStyleWithColors,
+                extract,
             },
             themeRuleValues,
             themeRuleMap
@@ -237,17 +236,17 @@ const getScopeProcessResult = (
                 }
             }
             const themeRuleValuesArr = Array.from(themeRuleValues);
-            if (Object.keys(cssRules).length) {
-                const filecontent = {
-                    cssRules,
-                    ruleValues: themeRuleValuesArr,
-                    resourcePath,
-                };
-                fs.writeFileSync(
-                    `${targetRsoleved}/${dirName}/${filename}.json`,
-                    JSON.stringify(filecontent, null, 4)
-                );
-            }
+
+            const filecontent = {
+                cssRules,
+                ruleValues: themeRuleValuesArr,
+                resourcePath,
+            };
+            fs.writeFileSync(
+                `${targetRsoleved}/${dirName}/${filename}.json`,
+                JSON.stringify(filecontent, null, 4)
+            );
+
             preprocessResult.code = postResult.css;
             return preprocessResult;
         });
@@ -441,6 +440,18 @@ function createPulignParamsFile(options = {}) {
     );
 }
 
+function getPluginParams(opt) {
+    const targetRsoleved = getCurrentPackRequirePath();
+    // webpack等插件将与getSass相同的参数，打入到pulignParams.js，这里就获取到作为默认参数
+    let defaultPluginOpt = {};
+    const parmasPath = `${targetRsoleved}/pulignParams.js`;
+    if (fs.existsSync(parmasPath)) {
+        defaultPluginOpt = require(parmasPath);
+    }
+    defaultPluginOpt = { ...defaultPluginOpt, ...opt };
+    return defaultPluginOpt;
+}
+
 export {
     getAllStyleVarFiles,
     getScopeProcessResult,
@@ -452,4 +463,5 @@ export {
     createArbitraryModeVarColors,
     getCurrentPackRequirePath,
     createPulignParamsFile,
+    getPluginParams,
 };
