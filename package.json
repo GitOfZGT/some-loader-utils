@@ -3,7 +3,7 @@
         "z-theme": "dist/bin/index.js"
     },
     "name": "@zougt/some-loader-utils",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "description": "implementation for less-loader or sass-loader. Compiles Less or sass to CSS.",
     "license": "MIT",
     "repository": "GitOfZGT/some-loader-utils",

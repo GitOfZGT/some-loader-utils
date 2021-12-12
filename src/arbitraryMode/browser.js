@@ -72,9 +72,13 @@ function getSetNewThemeMethod(options) {
         Object.keys(hybridValueMap).forEach(function (temp) {
             var sourceValue = hybridValueMap[temp];
             var sourceColors = Object.keys(sourceColorMap);
-            var findColor = sourceColors.find(function (colorStr) {
-                return sourceValue.includes(colorStr);
-            });
+            var findColor = null;
+            for (var i = 0; i < sourceColors.length; i++) {
+                if (sourceValue.indexOf(sourceColors[i]) > -1) {
+                    findColor = sourceColors[i];
+                    break;
+                }
+            }
             if (findColor) {
                 replaceHybridValueMap[sourceValue] = (
                     targetValueReplacer[temp] || temp
