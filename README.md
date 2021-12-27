@@ -26,7 +26,7 @@
 
 [one inline demo](https://gitofzgt.github.io/dynamic-theme-demos/webpack-vuecli4-elementui-dynamic-theme/)
 
-[one demo repository](https://github.com/GitOfZGT/dynamic-theme-demos/projects/webpack-vuecli4-elementui-dynamic-theme/)
+[one demo repository](https://github.com/GitOfZGT/dynamic-theme-demos/tree/master/projects/webpack-vuecli4-elementui-dynamic-theme/)
 
 ![效果图](https://img-blog.csdnimg.cn/238a2c0de7654c149e145a60dc004a08.gif#pic_center)
 
@@ -171,7 +171,7 @@ npx z-theme inspect
 
 [one inline demo](https://gitofzgt.github.io/dynamic-theme-demos/webpack-vuecli4-antdvue-preset-theme/)
 
-[one demo repository](https://github.com/GitOfZGT/dynamic-theme-demos/tree/master/projects/webpack-vuecli4-elementui-dynamic-theme)
+[one demo repository](https://github.com/GitOfZGT/dynamic-theme-demos/tree/master/projects/webpack-vuecli4-antdvue-preset-theme/)
 
 ![效果图](https://img-blog.csdnimg.cn/c11382d232a84aebab80b9f87eb66cc5.gif#pic_center)
 
