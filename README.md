@@ -28,7 +28,7 @@
 
 [one demo repository](https://github.com/GitOfZGT/dynamic-theme-demos/tree/master/projects/webpack-vuecli4-elementui-dynamic-theme/)
 
-![效果图](https://img-blog.csdnimg.cn/238a2c0de7654c149e145a60dc004a08.gif#pic_center)
+![效果图](https://img-blog.csdnimg.cn/56589b227df9470c83389b4fc0adbaaf.gif#pic_center)
 
 ## 在 webpack 中使用
 
