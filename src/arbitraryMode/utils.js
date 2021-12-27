@@ -9,6 +9,9 @@ export const colorValueReg = {
 };
 
 export function isSameColor(str1, str2) {
+    if (str1 === str2) {
+        return true;
+    }
     let same = false;
     try {
         const color1 = Color(str1).rgb().array();

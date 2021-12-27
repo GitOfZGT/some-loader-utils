@@ -67,26 +67,42 @@ export default (
                         currentRuleNodeMap[prop].value !==
                             themeRuleNodeMap[prop].value ||
                         (opts.includeStyleWithColors || []).some((item) => {
+                            if (
+                                Array.isArray(item.excludeSelectors) &&
+                                themeRuleNodeMap[prop].parent &&
+                                themeRuleNodeMap[prop].parent.type === 'rule'
+                            ) {
+                                const { selectors } =
+                                    themeRuleNodeMap[prop].parent;
+                                if (
+                                    item.excludeSelectors.some(
+                                        (selectorStr) =>
+                                            selectorStr.replace(
+                                                /,\s+/g,
+                                                ','
+                                            ) === selectors.join(',')
+                                    )
+                                ) {
+                                    return false;
+                                }
+                            }
                             const isExcludeProperty =
                                 Array.isArray(item.excludeCssProps) &&
                                 item.excludeCssProps.includes(prop);
+                            if (isExcludeProperty) {
+                                return false;
+                            }
                             if (Array.isArray(item.color)) {
-                                return (
-                                    !isExcludeProperty &&
-                                    item.color.some((co) =>
-                                        isSameColor(
-                                            co,
-                                            themeRuleNodeMap[prop].value
-                                        )
+                                return item.color.some((co) =>
+                                    isSameColor(
+                                        co,
+                                        themeRuleNodeMap[prop].value
                                     )
                                 );
                             }
-                            return (
-                                !isExcludeProperty &&
-                                isSameColor(
-                                    item.color,
-                                    themeRuleNodeMap[prop].value
-                                )
+                            return isSameColor(
+                                item.color,
+                                themeRuleNodeMap[prop].value
                             );
                         })
                     ) {
