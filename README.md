@@ -24,9 +24,9 @@
 
 可用颜色板选择任意颜色切换相关的梯度颜色，这里以 scss 为例
 
-[one inline demo](https://gitofzgt.github.io/dynamic-theme-demos/webpack-vuecli4-elementui-dynamic-demo/)
+[one inline demo](https://gitofzgt.github.io/dynamic-theme-demos/webpack-vuecli4-elementui-dynamic-theme/)
 
-[one demo repository](https://github.com/GitOfZGT/dynamic-theme-demos/projects/webpack-vuecli4-elementui-dynamic-demo)
+[one demo repository](https://github.com/GitOfZGT/dynamic-theme-demos/projects/webpack-vuecli4-elementui-dynamic-theme)
 
 ![效果图](https://img-blog.csdnimg.cn/238a2c0de7654c149e145a60dc004a08.gif#pic_center)
 
