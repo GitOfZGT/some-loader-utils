@@ -13,7 +13,25 @@
  *  */
 function getSetNewThemeMethod(options) {
     var Color = options.Color;
+    function mix(color1, color2, weight) {
+        var p = weight / 100.0;
+        var w = p * 2 - 1;
+        var a = color1.hsl().valpha - color2.hsl().valpha;
 
+        var w1 = ((w * a === -1 ? w : (w + a) / (1 + w * a)) + 1) / 2.0;
+        var w2 = 1 - w1;
+        var alpha = color1.hsl().valpha * p + color2.hsl().valpha * (1 - p);
+        var arr1 = color1.rgb().array();
+        var arr2 = color2.rgb().array();
+        var rgb = [
+            arr1[0] * w1 + arr2[0] * w2,
+            arr1[1] * w1 + arr2[1] * w2,
+            arr1[2] * w1 + arr2[2] * w2,
+            alpha,
+        ];
+
+        return Color.rgb(rgb);
+    }
     function getTargetColor(newPrimaryColor, percentGias) {
         var primaryHsvArr = newPrimaryColor.hsv().array();
         var getTargetVal = function (index) {
@@ -56,11 +74,23 @@ function getSetNewThemeMethod(options) {
                     replaceColorMap[key] = targetValueReplacer[key];
                 } else {
                     var item = sourceColorMap[key];
-                    var replacer = gradientReplacer[item.sourceVarColorString];
-                    var newColor = getTargetColor(
-                        Color(replacer || primaryColor),
-                        replacer ? item.sourcePercentGias : item.percentGias
-                    );
+
+                    var replacer = item.sourceVarColorString
+                        ? gradientReplacer[item.sourceVarColorString]
+                        : '';
+                    var newColor = '';
+                    if (item.mixColorString) {
+                        newColor = mix(
+                            Color(item.mixColorString),
+                            Color(replacer || primaryColor),
+                            item.weight
+                        );
+                    } else {
+                        newColor = getTargetColor(
+                            Color(replacer || primaryColor),
+                            replacer ? item.sourcePercentGias : item.percentGias
+                        );
+                    }
                     replaceColorMap[key] =
                         newColor.valpha < 1
                             ? newColor.rgb().toString()

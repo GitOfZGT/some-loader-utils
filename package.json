@@ -3,7 +3,7 @@
         "z-theme": "dist/bin/index.js"
     },
     "name": "@zougt/some-loader-utils",
-    "version": "1.4.2",
+    "version": "1.5.0",
     "description": "implementation for less-loader or sass-loader. Compiles Less or sass to CSS.",
     "license": "MIT",
     "repository": "GitOfZGT/some-loader-utils",
@@ -36,10 +36,6 @@
     "files": [
         "dist"
     ],
-    "peerDependencies": {
-        "less": "^3.13.1 || ^4.1.1",
-        "sass": "^1.32.8"
-    },
     "dependencies": {
         "cac": "^6.7.12",
         "color": "^4.0.1",

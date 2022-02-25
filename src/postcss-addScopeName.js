@@ -35,6 +35,7 @@ export default (
     return {
         postcssPlugin: 'postcss-addScopeName',
         Rule(rule, { Rule, Declaration }) {
+            let blendRule = null;
             // 与当前样式规则不相同的其他主题样式规则
             const themeRules = [];
             // 当前规则中与其他主题规则中不相同的属性
@@ -49,7 +50,7 @@ export default (
             const currentThemeKeyframes = [];
 
             const extractThemeKeyframesMap = {};
-            const getThemeRules = (themeRule) => {
+            const getThemeRules = (themeRule, varFile) => {
                 const childNodes = [];
                 // 先将主题规则属性按顺序去重
                 const themeRuleNodeMap = {};
@@ -66,45 +67,47 @@ export default (
                     if (
                         currentRuleNodeMap[prop].value !==
                             themeRuleNodeMap[prop].value ||
-                        (opts.includeStyleWithColors || []).some((item) => {
-                            if (
-                                Array.isArray(item.excludeSelectors) &&
-                                themeRuleNodeMap[prop].parent &&
-                                themeRuleNodeMap[prop].parent.type === 'rule'
-                            ) {
-                                const { selectors } =
-                                    themeRuleNodeMap[prop].parent;
+                        (!varFile.arbitraryMode &&
+                            (opts.includeStyleWithColors || []).some((item) => {
                                 if (
-                                    item.excludeSelectors.some(
-                                        (selectorStr) =>
-                                            selectorStr.replace(
-                                                /,\s+/g,
-                                                ','
-                                            ) === selectors.join(',')
-                                    )
+                                    Array.isArray(item.excludeSelectors) &&
+                                    themeRuleNodeMap[prop].parent &&
+                                    themeRuleNodeMap[prop].parent.type ===
+                                        'rule'
                                 ) {
+                                    const { selectors } =
+                                        themeRuleNodeMap[prop].parent;
+                                    if (
+                                        item.excludeSelectors.some(
+                                            (selectorStr) =>
+                                                selectorStr.replace(
+                                                    /,\s+/g,
+                                                    ','
+                                                ) === selectors.join(',')
+                                        )
+                                    ) {
+                                        return false;
+                                    }
+                                }
+                                const isExcludeProperty =
+                                    Array.isArray(item.excludeCssProps) &&
+                                    item.excludeCssProps.includes(prop);
+                                if (isExcludeProperty) {
                                     return false;
                                 }
-                            }
-                            const isExcludeProperty =
-                                Array.isArray(item.excludeCssProps) &&
-                                item.excludeCssProps.includes(prop);
-                            if (isExcludeProperty) {
-                                return false;
-                            }
-                            if (Array.isArray(item.color)) {
-                                return item.color.some((co) =>
-                                    isSameColor(
-                                        co,
-                                        themeRuleNodeMap[prop].value
-                                    )
+                                if (Array.isArray(item.color)) {
+                                    return item.color.some((co) =>
+                                        isSameColor(
+                                            co,
+                                            themeRuleNodeMap[prop].value
+                                        )
+                                    );
+                                }
+                                return isSameColor(
+                                    item.color,
+                                    themeRuleNodeMap[prop].value
                                 );
-                            }
-                            return isSameColor(
-                                item.color,
-                                themeRuleNodeMap[prop].value
-                            );
-                        })
+                            }))
                     ) {
                         themeRuleValues.add(
                             removeSpaceInColor(themeRuleNodeMap[prop].value)
@@ -119,9 +122,12 @@ export default (
                 Object.keys(themeRuleNodeMap).forEach((prop) => {
                     childNodes.push(themeRuleNodeMap[prop]);
                 });
-
                 themeRule.nodes = childNodes;
-                themeRules.push(themeRule.clone());
+                if (!arbitraryMode && varFile.arbitraryMode) {
+                    blendRule = themeRule.clone();
+                } else {
+                    themeRules.push(themeRule.clone());
+                }
                 themeRule.remove();
             };
             const restVarFiles = allStyleVarFiles.slice(0);
@@ -141,7 +147,7 @@ export default (
                         themeRule.type === 'rule' &&
                         themeRule.selector === rule.selector;
                     if (isSameRule) {
-                        getThemeRules(themeRule);
+                        getThemeRules(themeRule, restVarFiles[i]);
                         break;
                     }
                     // 当这条规则在@media内
@@ -160,7 +166,7 @@ export default (
                                 item.selector === rule.selector
                         );
                         if (atruleChild) {
-                            getThemeRules(atruleChild);
+                            getThemeRules(atruleChild, restVarFiles[i]);
                         }
 
                         break;
@@ -215,7 +221,10 @@ export default (
                                     }
                                 );
                                 if (existsDiffValue) {
-                                    if (!arbitraryMode) {
+                                    if (
+                                        !arbitraryMode &&
+                                        !restVarFiles[i].arbitraryMode
+                                    ) {
                                         currentThemeKeyframes.push(
                                             atruleChild.clone()
                                         );
@@ -270,7 +279,10 @@ export default (
                                 return isExst;
                             });
                             if (existsDiffValue) {
-                                if (!arbitraryMode) {
+                                if (
+                                    !arbitraryMode &&
+                                    !restVarFiles[i].arbitraryMode
+                                ) {
                                     currentThemeKeyframes.push(
                                         themeRule.clone()
                                     );
@@ -327,12 +339,38 @@ export default (
                     // 保持themeRules的顺序对应 opts.allStyleVarFiles的顺序，然后添加scopeName
                     themeRules.splice(opts.startIndex, 0, firstThemeRule);
                 }
-                const scopeItems = !arbitraryMode
-                    ? allStyleVarFiles
-                    : restVarFiles;
+                let arbitraryModeScopeItem = null;
+                const scopeItems = (
+                    !arbitraryMode ? allStyleVarFiles : restVarFiles
+                ).filter((item) => {
+                    if (item.arbitraryMode) {
+                        arbitraryModeScopeItem = item;
+                    }
+                    return !item.arbitraryMode;
+                });
+
                 themeRules.forEach((item, i) => {
                     if (item && item.nodes.length) {
-                        if (!arbitraryMode) {
+                        const removeNodes = [];
+                        if (blendRule && blendRule.nodes.length) {
+                            item.nodes.forEach((node) => {
+                                if (
+                                    node.type === 'decl' &&
+                                    blendRule.nodes.some(
+                                        (b) =>
+                                            b.type === 'decl' &&
+                                            b.prop === node.prop &&
+                                            b.value === node.prop
+                                    )
+                                ) {
+                                    removeNodes.push(node);
+                                }
+                            });
+                        }
+                        removeNodes.forEach((node) => {
+                            item.removeChild(node);
+                        });
+                        if (!arbitraryMode && item.nodes.length) {
                             // eslint-disable-next-line no-param-reassign
                             item.selectors = item.selectors.map((selector) =>
                                 addScopeName(selector, scopeItems[i].scopeName)
@@ -343,6 +381,7 @@ export default (
                         }
                         let themeCssItem = item;
                         if (
+                            themeCssItem.nodes.length &&
                             rule.parent.type === 'atrule' &&
                             rule.parent.name === 'media'
                         ) {
@@ -351,12 +390,47 @@ export default (
                             pclone.append(item.clone());
                             themeCssItem = pclone;
                         }
-                        const scopeSet =
-                            themeRuleMap[scopeItems[i].scopeName] || new Set();
-                        scopeSet.add(themeCssItem.toString());
-                        themeRuleMap[scopeItems[i].scopeName] = scopeSet;
+                        if (themeCssItem.nodes.length) {
+                            const scopeSet =
+                                themeRuleMap[scopeItems[i].scopeName] ||
+                                new Set();
+                            scopeSet.add(themeCssItem.toString());
+                            themeRuleMap[scopeItems[i].scopeName] = scopeSet;
+                        }
                     }
                 });
+                if (!arbitraryMode && blendRule && arbitraryModeScopeItem) {
+                    let themeCssItem = blendRule;
+                    if (themeCssItem.nodes.length) {
+                        // eslint-disable-next-line no-param-reassign
+                        themeCssItem.selectors = themeCssItem.selectors.map(
+                            (selector) =>
+                                addScopeName(
+                                    selector,
+                                    arbitraryModeScopeItem.scopeName
+                                )
+                        );
+                    }
+
+                    if (
+                        themeCssItem.nodes.length &&
+                        rule.parent.type === 'atrule' &&
+                        rule.parent.name === 'media'
+                    ) {
+                        const pclone = rule.parent.clone();
+                        pclone.removeAll();
+                        pclone.append(themeCssItem.clone());
+                        themeCssItem = pclone;
+                    }
+                    if (themeCssItem.nodes.length) {
+                        const scopeSet =
+                            themeRuleMap[arbitraryModeScopeItem.scopeName] ||
+                            new Set();
+                        scopeSet.add(themeCssItem.toString());
+                        themeRuleMap[arbitraryModeScopeItem.scopeName] =
+                            scopeSet;
+                    }
+                }
                 if (!arbitraryMode) {
                     const selectorMap = rule.selectors.reduce((tol, key) => {
                         return { ...tol, [key]: true };

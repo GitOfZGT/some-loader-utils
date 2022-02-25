@@ -12,6 +12,54 @@ import { getCurrentPackRequirePath } from '../packPath';
 
 import { colorValueReg, isSameColor } from './utils';
 
+function mix(color1, color2, weight) {
+    const p = weight / 100.0;
+    const w = p * 2 - 1;
+    const a = color1.hsl().valpha - color2.hsl().valpha;
+
+    const w1 = ((w * a === -1 ? w : (w + a) / (1 + w * a)) + 1) / 2.0;
+    const w2 = 1 - w1;
+    const alpha = color1.hsl().valpha * p + color2.hsl().valpha * (1 - p);
+    const arr1 = color1.rgb().array();
+    const arr2 = color2.rgb().array();
+    const rgb = [
+        arr1[0] * w1 + arr2[0] * w2,
+        arr1[1] * w1 + arr2[1] * w2,
+        arr1[2] * w1 + arr2[2] * w2,
+        alpha,
+    ];
+
+    return Color.rgb(rgb);
+}
+function getMixColorAndWeight({ primaryColor, targetColor, otherMixColors }) {
+    const arr = ['#ffffff', '#000000']
+        .concat(otherMixColors || [])
+        .map((cstr) => Color(cstr));
+    const arr1 = targetColor.rgb().array();
+    let weight = 0;
+    let mixColor = null;
+    for (let i = 0; i < arr.length; i++) {
+        const color1 = arr[i];
+        for (let j = 1; j <= 100; j++) {
+            const sourceColor = mix(color1, primaryColor, j);
+            const arr2 = sourceColor.rgb().array();
+            if (
+                Math.round(arr1[0]) === Math.round(arr2[0]) &&
+                Math.round(arr1[1]) === Math.round(arr2[1]) &&
+                Math.round(arr1[2]) === Math.round(arr2[2])
+            ) {
+                weight = j;
+                mixColor = color1;
+                break;
+            }
+        }
+        if (mixColor) {
+            break;
+        }
+    }
+    return { mixColor, weight, valpha: targetColor.valpha };
+}
+
 function getHsvPercentGias(primaryColor, resultColor) {
     const primaryHsvArr = primaryColor.hsv().array();
     const resultHsvArr = resultColor.hsv().array();
@@ -77,6 +125,7 @@ function separatValue(cssValues) {
 function getResultColorReplaceMap({
     cssColors,
     varsColorValues,
+    otherMixColors,
     defaultPrimaryColor,
     includeStyleWithColors,
     hueDiffControls,
@@ -144,36 +193,72 @@ function getResultColorReplaceMap({
             }
             const reHue = Math.floor(resultColor.color[0]);
             if (hues.some((h) => h === reHue)) {
-                sourceColorMap[colorString] = {
-                    percentGias: getHsvPercentGias(
-                        primaryVarColor,
-                        resultColor
-                    ),
-                    varColorString: defaultPrimaryColor,
-                    sourcePercentGias: getHsvPercentGias(varColor, resultColor),
-                    sourceVarColorString: varStr,
-                };
+                const { mixColor, weight, valpha } = getMixColorAndWeight({
+                    primaryColor: varColor,
+                    targetColor: resultColor,
+                    otherMixColors,
+                });
+                if (mixColor) {
+                    sourceColorMap[colorString] = {
+                        mixColorString: mixColor.hex(),
+                        weight,
+                        // varColorString: defaultPrimaryColor,
+                        sourceVarColorString: varStr,
+                        valpha,
+                    };
+                } else {
+                    sourceColorMap[colorString] = {
+                        percentGias: getHsvPercentGias(
+                            primaryVarColor,
+                            resultColor
+                        ),
+                        // varColorString: defaultPrimaryColor,
+                        sourcePercentGias: getHsvPercentGias(
+                            varColor,
+                            resultColor
+                        ),
+                        sourceVarColorString: varStr,
+                    };
+                }
                 finded = true;
                 break;
             }
         }
         if (!finded && defaultPrimaryColor) {
-            sourceColorMap[colorString] = {
-                percentGias: getHsvPercentGias(primaryVarColor, resultColor),
-                varColorString: defaultPrimaryColor,
-            };
+            const { mixColor, weight } = getMixColorAndWeight({
+                primaryColor: primaryVarColor,
+                targetColor: resultColor,
+                otherMixColors,
+            });
+            if (mixColor) {
+                sourceColorMap[colorString] = {
+                    mixColorString: mixColor.hex(),
+                    weight,
+                    // varColorString: defaultPrimaryColor,
+                };
+            } else {
+                sourceColorMap[colorString] = {
+                    percentGias: getHsvPercentGias(
+                        primaryVarColor,
+                        resultColor
+                    ),
+                    // varColorString: defaultPrimaryColor,
+                };
+            }
         }
     });
     return sourceColorMap;
 }
-function getThemeStyleContent() {
-    return extractThemeCss({}).then(({ themeCss, themeRuleValues }) => {
-        let styleContent = '';
-        Object.values(themeCss).forEach((css) => {
-            styleContent = `${styleContent}${css}`;
-        });
-        return { styleContent, themeRuleValues };
-    });
+function getThemeStyleContent(scopeName, removeCssScopeName) {
+    return extractThemeCss({ scopeName, removeCssScopeName }).then(
+        ({ themeCss, themeRuleValues }) => {
+            let styleContent = '';
+            Object.values(themeCss).forEach((css) => {
+                styleContent = `${styleContent}${css}`;
+            });
+            return { styleContent, themeRuleValues };
+        }
+    );
 }
 
 function createSetCustomThemeFile({
@@ -186,7 +271,8 @@ function createSetCustomThemeFile({
     appendedContent,
     preAppendedContent,
     importUtils,
-    hueDiffControls
+    hueDiffControls,
+    otherMixColors,
 }) {
     if (typeof defaultPrimaryColor !== 'string' || !defaultPrimaryColor) {
         throw Error('defaultPrimaryColor can not found.');
@@ -206,7 +292,8 @@ function createSetCustomThemeFile({
         varsColorValues: baseVarColorsJson.baseVarColors || [],
         defaultPrimaryColor,
         includeStyleWithColors,
-        hueDiffControls
+        hueDiffControls,
+        otherMixColors,
     });
 
     const targetValueReplacer = Object.keys(sourceColorMap)
@@ -282,7 +369,7 @@ function setCustomTheme(options) {
     return prettier.resolveConfig(process.cwd()).then((options) => {
         const setCustomThemeConent = prettier.format(
             `${preAppendedContent || ''}${fileContent}${appendedContent || ''}`,
-            options || {}
+            { ...(options || {}), parser: 'babel' }
         );
         if (customThemeOutputPath) {
             fs.outputFileSync(customThemeOutputPath, setCustomThemeConent);

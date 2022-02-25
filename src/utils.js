@@ -20,6 +20,28 @@ import { colorValueReg } from './arbitraryMode/utils';
 
 import { getCurrentPackRequirePath } from './packPath';
 
+function getBlendVarFiles(allStyleVarFiles) {
+    const allStyleVarFilesCopy = allStyleVarFiles.slice(0);
+    let blendVarItem = null;
+    for (let index = 0; index < allStyleVarFiles.length; index++) {
+        const item = allStyleVarFiles[index];
+        if (item.arbitraryMode) {
+            blendVarItem = item;
+            allStyleVarFilesCopy.splice(index, 1);
+            break;
+        }
+    }
+    allStyleVarFilesCopy.forEach((item) => {
+        item.arbitraryMode = false;
+    });
+    if (blendVarItem) {
+        allStyleVarFilesCopy.push(blendVarItem);
+    }
+    return {
+        allStyleVarFiles: allStyleVarFilesCopy,
+        blendVarFile: blendVarItem,
+    };
+}
 const getAllStyleVarFiles = (loaderContext, options) => {
     const varsSet = {};
     (options.multipleScopeVars || []).forEach((item) => {
@@ -118,7 +140,7 @@ const getAllStyleVarFiles = (loaderContext, options) => {
     }
     return options.arbitraryMode
         ? allStyleVarFiles.slice(0, 2)
-        : allStyleVarFiles;
+        : getBlendVarFiles(allStyleVarFiles).allStyleVarFiles;
 };
 
 // const cssFragReg = /[^{}/\\]+{[^{}]*?}/g;
@@ -299,7 +321,8 @@ function removeThemeFiles() {
         fs.removeSync(`${targetRsoleved}/${dirName}`);
     }
 }
-function getExtractThemeCode() {
+function getExtractThemeCode(opt) {
+    const { scopeName = '', excludeScopeNames = [] } = opt || {};
     const targetRsoleved = getCurrentPackRequirePath();
     const dirName = 'extractTheme';
     if (fs.existsSync(`${targetRsoleved}/${dirName}`)) {
@@ -312,11 +335,21 @@ function getExtractThemeCode() {
                     .readFileSync(`${targetRsoleved}/${dirName}/${file}`)
                     .toString()
             );
-            Object.keys(cssRules).forEach((key) => {
-                let scopeCssArr = themeRuleCodes[key] || [];
-                scopeCssArr = scopeCssArr.concat(cssRules[key]);
-                themeRuleCodes[key] = scopeCssArr;
-            });
+            if (scopeName) {
+                if (cssRules[scopeName]) {
+                    let scopeCssArr = themeRuleCodes[scopeName] || [];
+                    scopeCssArr = scopeCssArr.concat(cssRules[scopeName]);
+                    themeRuleCodes[scopeName] = scopeCssArr;
+                }
+            } else {
+                Object.keys(cssRules)
+                    .filter((key) => !(excludeScopeNames || []).includes(key))
+                    .forEach((key) => {
+                        let scopeCssArr = themeRuleCodes[key] || [];
+                        scopeCssArr = scopeCssArr.concat(cssRules[key]);
+                        themeRuleCodes[key] = scopeCssArr;
+                    });
+            }
             themeRuleValues = themeRuleValues.concat(ruleValues);
         });
         return {
@@ -333,8 +366,15 @@ function getExtractThemeCode() {
  * @param {Boolean} options.removeCssScopeName 抽取的css是否移除scopeName
  * @returns { css: String, themeCss: Object , themeCommonCss: String }
  */
-const extractThemeCss = ({ removeCssScopeName }) => {
-    const { themeRuleCodes, themeRuleValues } = getExtractThemeCode();
+const extractThemeCss = ({
+    removeCssScopeName,
+    scopeName,
+    excludeScopeNames,
+}) => {
+    const { themeRuleCodes, themeRuleValues } = getExtractThemeCode({
+        scopeName,
+        excludeScopeNames,
+    });
 
     const allPro = Object.keys(themeRuleCodes || {}).map((key) => {
         const codes = (
@@ -464,4 +504,5 @@ export {
     getCurrentPackRequirePath,
     createPulignParamsFile,
     getPluginParams,
+    getBlendVarFiles,
 };
