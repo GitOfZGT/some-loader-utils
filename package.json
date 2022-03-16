@@ -40,6 +40,14 @@
         "less": "^3.13.1 || ^4.1.1",
         "sass": "^1.32.8"
     },
+    "peerDependenciesMeta": {
+        "less": {
+            "optional": true
+        },
+        "sass": {
+            "optional": true
+        }
+    },
     "dependencies": {
         "cac": "^6.7.12",
         "color": "^4.0.1",
